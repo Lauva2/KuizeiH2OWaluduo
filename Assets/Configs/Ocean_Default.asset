@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81f6cb0954909e04dacc729793ec1c02, type: 3}
+  m_Name: Ocean_Default
+  m_EditorClassIdentifier: 
+  Material: {fileID: 2100000, guid: 107ef5f404962c643bd6a5d6dccf7960, type: 2}
+  SeaLevel: 0
+  SurfaceSize: 320
+  GridResolution: 192
+  FollowStep: 16
+  DeepColor: {r: 0.025, g: 0.16, b: 0.34, a: 1}
+  ShallowColor: {r: 0.12, g: 0.7, b: 0.66, a: 1}
+  FoamColor: {r: 0.82, g: 0.96, b: 0.91, a: 1}
+  ReflectionColor: {r: 0.48, g: 0.8, b: 0.83, a: 1}
+  ShallowCenter: {x: -28, y: 12}
+  ShallowRadii: {x: 29, y: 40}
+  DepthTransitionWidth: 14
+  BoundaryVariation: 4
+  ShallowDepth: 3
+  DeepDepth: 45
+  WaveA: {x: 1, y: 0.35, z: 12, w: 0.14}
+  WaveB: {x: -0.5, y: 1, z: 6.5, w: 0.075}
+  WaveC: {x: 0.2, y: 1, z: 3.1, w: 0.03}
+  WaveSpeed: 0.45
+  RippleStrength: 0.32
+  RippleScale: 0.8
+  CrestFoam: 0.22
+  ContactFoamWidth: 0.5
+  ContactFoamStrength: 0.75
+  SunGlint: 0.32

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6c923edfbaecc244ba693e19d2092d0, type: 3}
+  m_Name: Salvage_Default
+  m_EditorClassIdentifier: 
+  WoodPrefab: {fileID: 2861627742609919075, guid: 7d832545b9497714d821681aea9f8a72, type: 3}
+  ScrapPrefab: {fileID: 2744789269610384491, guid: 41b42189415044249986abd8fb013e47, type: 3}
+  CurrentDirection: {x: 0, y: -1}
+  DriftSpeed: 0.35
+  SpawnInterval: 5
+  SpawnAheadDistance: 7
+  LaneGap: 1.1
+  Reach: 2.8
+  GatherDuration: 1.2
+  Lifetime: 85
+  MaximumItems: 18
+  WoodPerItem: 2
+  ScrapPerItem: 1

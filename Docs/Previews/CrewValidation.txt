@@ -1,0 +1,1 @@
+PASS: actual Play mode + AA bundle UI; one configured sailor; automatic travel/work/completion; paused movement/progress with continued blueprint planning; chained expansion; MVC status/counts; deck-only detour routing; disconnected task rejection/retry; cancellation while walking and working; replacement task identity; negative-coordinate chain; preserved interrupted progress.

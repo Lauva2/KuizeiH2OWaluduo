@@ -1,0 +1,41 @@
+# Unity generated data and local editor preferences
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Bb]uild/
+/[Bb]uilds/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/[Ss]erver[Dd]ata/
+
+# IDE files generated from the Unity project
+/.idea/
+/.vs/
+/.vscode/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.opendb
+*.VC.db
+*.DotSettings.user
+
+# Generated Addressables content; keep source settings and groups
+/Assets/AddressableAssetsData/*/*.bin*
+/Assets/StreamingAssets/aa/
+/Assets/StreamingAssets/aa.meta
+
+# Logs, crash dumps and OS metadata
+*.log
+sysinfo.txt
+*.stackdump
+.DS_Store
+Thumbs.db
+Desktop.ini

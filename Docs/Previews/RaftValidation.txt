@@ -1,0 +1,1 @@
+PASS: real Play mode + built Addressables bundles; starter grid; occupied/diagonal/bounds rejection; negative coordinates; blueprint chains and connectivity-safe cancellation; construction lifecycle; paused planning; MVC refresh; four UI layers; single-instance opens; cache hide/reuse; destroy/reload; pending load close/destroy; listener cleanup; UI raycasts.

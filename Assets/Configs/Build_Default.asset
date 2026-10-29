@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64d5e4e573c54139a869b2bd93a71f81, type: 3}
+  m_Name: Build_Default
+  m_EditorClassIdentifier: 
+  TileSize: 2
+  DeckHeight: 0.48
+  MaximumCoordinate: 64
+  DeckPrefab: {fileID: 1753997968858086256, guid: 35c60f654cff39a4cb1d9cb93ed7c378, type: 3}
+  BlueprintPrefab: {fileID: 9020709013040471485, guid: 2a4f7e354d7add74aac4ac70abcfeb40, type: 3}
+  DeckCost:
+    Wood: 4
+    Scrap: 1
+    Fish: 0
+    CookedFish: 0
+  GrillPrefab: {fileID: 4603507305570546047, guid: c2994614fcb7630459fb73c9a8de7b9b, type: 3}
+  GrillBlueprintPrefab: {fileID: 4995232204428950995, guid: 921760ddf34f6ed4ea9ad7c246a83235, type: 3}
+  GrillCost:
+    Wood: 4
+    Scrap: 2
+    Fish: 0
+    CookedFish: 0
+  ValidColor: {r: 0.15, g: 0.91, b: 0.7, a: 0.38}
+  InvalidColor: {r: 1, g: 0.28, b: 0.2, a: 0.35}
+  PlannedColor: {r: 0.24, g: 0.74, b: 0.95, a: 0.28}

@@ -1,0 +1,1 @@
+PASS: region types, shallow/deep depth endpoints, height independence, 1025 transition samples, stable color after mesh recentering, GPU shallow/deep palette separation.

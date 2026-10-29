@@ -1,0 +1,2 @@
+PASS: scene references, camera/ocean initialization, orthographic depth, 100 height samples, animation, zero timestep, far camera render, contact foam, shallow/deep regions, shader compilation.
+Renderer: NVIDIA GeForce RTX 5060 / Direct3D11
