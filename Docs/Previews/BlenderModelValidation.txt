@@ -1,0 +1,13 @@
+Blender model integration: PASS
+Blender 5.2.3 LTS; metres; native shared meshes baked from evaluated Blender geometry.
+DeckTile: 4200 triangles; 1 shared mesh nodes; FBX imported.
+FishSilver: 520 triangles; 2 shared mesh nodes; FBX imported.
+FishCoral: 520 triangles; 2 shared mesh nodes; FBX imported.
+FishBlue: 520 triangles; 2 shared mesh nodes; FBX imported.
+Lantern: 914 triangles; 3 shared mesh nodes; FBX imported.
+WaterBottle: 464 triangles; 1 shared mesh nodes; FBX imported.
+SupplyCrate: 1072 triangles; 1 shared mesh nodes; FBX imported.
+PASS: two-metre deck bounds / five existing material slots; three separate tail pivots; two renderers per fish; three per lantern; one per supply; original pickup colliders and markers preserved.
+
+Actual Unity Play regressions on the final Blender kit: OceanLife 124; Exploration 1530; Progression 923; Cooking 245; Fishing PASS. Main/isolated-QA changed asset and script comparison: 0 differences after whitespace normalization. Missing asset metas: 0. git diff --check: clean.
+Blue-fish readability follow-up: runtime palette (0.43,0.76,0.81), with original underwater absorption preserved; OceanLifeValidation re-run PASS, 124 assertions. GPU shallow/deep contrast=27200/7991; opaque occlusion check remains passing.

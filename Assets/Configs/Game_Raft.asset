@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 422c0deea9653d04caf47dbc7a23d8d8, type: 3}
   m_Name: Game_Raft
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   Ocean: {fileID: 11400000, guid: 7adbce1ec439e6e4fbd1f62601fdc335, type: 2}
   Building: {fileID: 11400000, guid: 59b5c51ba8a424c49b55485ec0fc0d45, type: 2}
   Crew: {fileID: 11400000, guid: dd5d10b51d595f24a94fae6a8ffa3605, type: 2}
@@ -20,6 +20,10 @@ MonoBehaviour:
   Fishing: {fileID: 11400000, guid: e20c02988de400a449c94d7cf151a9e1, type: 2}
   Production: {fileID: 11400000, guid: 9c0dbb8aa9b7a99448c4cb61d8503870, type: 2}
   Needs: {fileID: 11400000, guid: 73c57cbdda488db43b10184915e80253, type: 2}
+  Water: {fileID: 11400000, guid: 39e3e0efa2c6d4b43830ca07cd874bfa, type: 2}
+  Loot: {fileID: 11400000, guid: 23a6af7318fc6d645bfaa971dc1239e3, type: 2}
+  DayNight: {fileID: 11400000, guid: f3d7e512e0a133344a898eb969ccea2f, type: 2}
+  OceanLife: {fileID: 11400000, guid: 8d09429516eb4274a99f50ba13f02173, type: 2}
   CameraTilt: 52
   CameraYaw: 35
   CameraSize: 7.8

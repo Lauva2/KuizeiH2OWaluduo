@@ -19,27 +19,28 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties: 
+  m_LockedProperties:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
     - _ContactFoamStrength: 0.75
-    - _ContactFoamWidth: 0.5
-    - _CrestFoam: 0.22
+    - _ContactFoamWidth: 0.4
+    - _CrestFoam: 0.12
     - _OceanTime: -1
-    - _RippleScale: 0.8
-    - _RippleStrength: 0.32
-    - _SunGlint: 0.32
+    - _ReflectionStrength: 0.38
+    - _RippleScale: 1.15
+    - _RippleStrength: 0.45
+    - _SunGlint: 0.6
     - _WaveSpeed: 0.45
     m_Colors:
-    - _DeepColor: {r: 0.025, g: 0.16, b: 0.34, a: 1}
-    - _DepthTransition: {r: 14, g: 4, b: 0, a: 0}
+    - _DeepColor: {r: 0.02, g: 0.22, b: 0.43, a: 1}
+    - _DepthTransition: {r: 24, g: 4, b: 0, a: 0}
     - _FoamColor: {r: 0.82, g: 0.96, b: 0.91, a: 1}
-    - _ReflectionColor: {r: 0.48, g: 0.8, b: 0.83, a: 1}
+    - _ReflectionColor: {r: 0.29, g: 0.67, b: 0.8, a: 1}
     - _ShallowArea: {r: -28, g: 12, b: 29, a: 40}
-    - _ShallowColor: {r: 0.12, g: 0.7, b: 0.66, a: 1}
+    - _ShallowColor: {r: 0.16, g: 0.68, b: 0.63, a: 1}
     - _WaveA: {r: 1, g: 0.35, b: 12, a: 0.14}
     - _WaveB: {r: -0.5, g: 1, b: 6.5, a: 0.075}
     - _WaveC: {r: 0.2, g: 1, b: 3.1, a: 0.03}

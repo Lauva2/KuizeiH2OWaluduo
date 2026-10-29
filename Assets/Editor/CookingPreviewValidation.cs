@@ -51,6 +51,7 @@ namespace RaftGame.Editor
             try
             {
                 var game = UnityEngine.Object.FindObjectOfType<GameManager>();
+                ExplorationValidation.UseFishCatchFixture(game.Loot);
                 var build = UnityEngine.Object.FindObjectOfType<BuildManager>();
                 var crew = UnityEngine.Object.FindObjectOfType<CrewManager>();
                 var inventory = UnityEngine.Object.FindObjectOfType<ResourceManager>();

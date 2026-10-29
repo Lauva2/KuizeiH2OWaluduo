@@ -11,17 +11,21 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c6c923edfbaecc244ba693e19d2092d0, type: 3}
   m_Name: Salvage_Default
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   WoodPrefab: {fileID: 2861627742609919075, guid: 7d832545b9497714d821681aea9f8a72, type: 3}
   ScrapPrefab: {fileID: 2744789269610384491, guid: 41b42189415044249986abd8fb013e47, type: 3}
+  BottlePrefab: {fileID: 1879715020911959130, guid: fa854dad321c8de4b906332b6b1ac433, type: 3}
+  SupplyCratePrefab: {fileID: 3001745319034306669, guid: 8f18c6fb734d18747b52c8b91508f8d2, type: 3}
   CurrentDirection: {x: 0, y: -1}
   DriftSpeed: 0.35
-  SpawnInterval: 5
+  SpawnInterval: 16
+  SpawnIntervalVariation: 0.35
+  StartingItems: 3
   SpawnAheadDistance: 7
   LaneGap: 1.1
   Reach: 2.8
   GatherDuration: 1.2
   Lifetime: 85
-  MaximumItems: 18
+  MaximumItems: 7
   WoodPerItem: 2
   ScrapPerItem: 1

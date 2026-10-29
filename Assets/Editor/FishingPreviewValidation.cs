@@ -56,6 +56,7 @@ namespace RaftGame.Editor
             try
             {
                 var game = UnityEngine.Object.FindObjectOfType<GameManager>();
+                ExplorationValidation.UseFishCatchFixture(game.Loot);
                 var fishing = UnityEngine.Object.FindObjectOfType<FishingManager>();
                 var crew = UnityEngine.Object.FindObjectOfType<CrewManager>();
                 var build = UnityEngine.Object.FindObjectOfType<BuildManager>();
@@ -97,10 +98,14 @@ namespace RaftGame.Editor
                 await Until(() => inventory.GetTotal(ResourceType.Fish) == initialFish + 1, 13f, build, crew);
                 Require(inventory.GetTotal(ResourceType.Wood) == 4 && inventory.GetTotal(ResourceType.Scrap) == 1,
                     "Fish is a separate inventory resource; fishing consumes no construction materials");
-                Require(panel.FishText.text.StartsWith("鲜鱼 " + (initialFish + 1)), "MVC fish count refreshes");
+                Require(panel.FishText.text == (initialFish + 1).ToString(), "MVC graphical resource count refreshes");
                 await Until(() => crew.Activity == CrewActivity.Fishing && crew.WorkProgress >= 0.1f, 10f, build, crew);
                 int beforeSalvage = inventory.GetTotal(ResourceType.Fish);
-                FloatingResource item = salvage.Spawn(ResourceType.Wood, new Vector3(-4.1f, 0, 1.8f));
+                // Put this preemption sample beside the current angler. A fixed world lane
+                // can now drift away before the sailor crosses the raft to reach it.
+                Vector3 angler = build.CellToWorld(crew.CurrentCell);
+                Vector3 castDirection = bobber.position - angler; castDirection.y = 0;
+                FloatingResource item = salvage.Spawn(ResourceType.Wood, angler + castDirection.normalized * 2);
                 salvage.SetMarked(item, true);
                 await Until(() => crew.Activity == CrewActivity.Gathering, 10f, build, crew);
                 Require(fishing.AvailableRods == 1 && inventory.GetTotal(ResourceType.Fish) == beforeSalvage,
@@ -120,7 +125,7 @@ namespace RaftGame.Editor
                 TestNoRod();
                 File.WriteAllText("Docs/Previews/FishingValidation.txt",
                     "PASS: actual Play mode + built AA UI; one starter rod; deck-only travel to clear water; visible rod/line/bobber; " +
-                    "pause; partial catches give no fish; construction and marked salvage preemption; automatic resume; fish-only inventory credit; " +
+                    "pause; partial catches give no fish; construction and marked salvage preemption; automatic resume; deterministic fish reward sample (mixed outcomes covered by ExplorationValidation); " +
                     "cache-safe UI toggle; exclusive rod ownership; casting position checks; planned-water invalidation; catch-once and reentrant protection; " +
                     "fish reservation invariants; interrupted walking recovery; no-rod behavior.\n");
                 Debug.Log("FISHING_VALIDATION_OK");

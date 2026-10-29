@@ -38,6 +38,7 @@ namespace RaftGame.Editor
             game.Building.GrillBlueprintPrefab = CreateGhost(game.Building.GrillPrefab);
             EditorUtility.SetDirty(game.Building);
             UpdateSailor(); UpdatePanel();
+            ManagementHudBuilder.Rebuild();
             AssetDatabase.SaveAssets();
             if (!EditorSceneManager.SaveScene(scene)) throw new IOException("Unable to save cooking setup.");
             Debug.Log("COOKING_SCENE_OK");

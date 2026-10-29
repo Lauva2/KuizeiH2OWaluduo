@@ -6,6 +6,7 @@ using RaftGame.Building;
 using RaftGame.Crew;
 using RaftGame.Ocean;
 using RaftGame.Resources;
+using RaftGame.Core;
 
 namespace RaftGame.Salvage
 {
@@ -18,10 +19,14 @@ namespace RaftGame.Salvage
         private OceanManager ocean;
         private ResourceManager resources;
         private Camera sceneCamera;
-        private Vector2 flow;
-        private Vector2 side;
+        private LootManager loot;
         private int sequence;
+        private int randomState;
+        public int RandomState => randomState;
+        public int Sequence => sequence;
         private float spawnTimer;
+        public float SpawnTimer => spawnTimer;
+        public int MaximumItems => configuration.MaximumItems;
         public bool IsInitialized { get; private set; }
         public int Version { get; private set; }
         public IReadOnlyList<FloatingResource> Items => items;
@@ -30,7 +35,7 @@ namespace RaftGame.Salvage
         public string Message { get; private set; } = "点击漂浮物标记打捞 · 再次点击取消";
         public event Action Changed;
 
-        public bool Initialize(SalvageConfig config, BuildManager build, OceanManager sea, ResourceManager inventory, Camera camera)
+        public bool Initialize(SalvageConfig config, BuildManager build, OceanManager sea, ResourceManager inventory, Camera camera, LootManager rewards = null)
         {
             if (IsInitialized) return true;
             if (config == null || config.WoodPrefab == null || config.ScrapPrefab == null ||
@@ -41,12 +46,10 @@ namespace RaftGame.Salvage
             ocean = sea;
             resources = inventory;
             sceneCamera = camera;
-            flow = config.CurrentDirection.sqrMagnitude > 0.001f ? config.CurrentDirection.normalized : Vector2.down;
-            side = new Vector2(-flow.y, flow.x);
+            loot = rewards; randomState = SeaRandom.Seed();
             IsInitialized = true;
-            // Start with useful supply already approaching both sides of the small raft.
-            for (int i = 0; i < 6; i++) SpawnInLane(i % 2 == 0 ? -1 : 1, i / 2 * 3.8f - 2f);
-            spawnTimer = config.SpawnInterval;
+            for (int i = 0; i < Mathf.Min(config.StartingItems, config.MaximumItems); i++) SpawnRandom(SeaRandom.Range(ref randomState, .5f, 5));
+            spawnTimer = NextInterval();
             return true;
         }
 
@@ -60,7 +63,8 @@ namespace RaftGame.Salvage
                 if (item == null) { items.RemoveAt(index); Notify(); continue; }
                 item.Age += dt;
                 Vector3 position = item.transform.position;
-                position += new Vector3(flow.x, 0, flow.y) * (Mathf.Max(0f, configuration.DriftSpeed) * dt);
+                Vector2 flow = ocean.GetDriftDirection(position, item.Windage);
+                position += new Vector3(flow.x, 0, flow.y) * (Mathf.Max(0f, configuration.DriftSpeed) * item.DriftMultiplier * dt);
                 if (item.Age > configuration.Lifetime || DeckPathfinder.HasDeck(building.Cells, building.WorldToCell(position)))
                 { Remove(item); continue; }
                 position.y = ocean.GetSurfaceHeight(position) + 0.08f + Mathf.Sin(item.Age * 1.6f + item.Phase) * 0.025f;
@@ -71,17 +75,17 @@ namespace RaftGame.Salvage
             spawnTimer -= dt;
             if (dt > 0f && spawnTimer <= 0f && items.Count < configuration.MaximumItems)
             {
-                SpawnInLane(sequence % 2 == 0 ? -1 : 1, configuration.SpawnAheadDistance);
-                spawnTimer = Mathf.Max(1f, configuration.SpawnInterval);
+                SpawnRandom(SeaRandom.Range(ref randomState, configuration.SpawnAheadDistance * .45f, configuration.SpawnAheadDistance * 1.3f));
+                spawnTimer = NextInterval();
             }
-            if (building.Tool != BuildTool.None || Input.GetMouseButton(2) ||
+            if (building.CatalogOpen || building.Tool != BuildTool.None || Input.GetMouseButton(2) ||
                 (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())) return;
             if (Input.GetMouseButtonDown(0)) TryToggleMarkAt(sceneCamera.ScreenPointToRay(Input.mousePosition));
         }
 
         public bool TryToggleMarkAt(Ray ray)
         {
-            if (!IsInitialized || building.Tool != BuildTool.None) return false;
+            if (!IsInitialized || building.CatalogOpen || building.Tool != BuildTool.None) return false;
             // Drifting objects move outside FixedUpdate; clicks must use their current visible positions,
             // including while simulation time is paused.
             Physics.SyncTransforms();
@@ -90,8 +94,11 @@ namespace RaftGame.Salvage
             return IsActive(item) && SetMarked(item, !item.IsMarked);
         }
 
-        private void SpawnInLane(int lane, float ahead)
+        private float NextInterval() => Mathf.Max(1, configuration.SpawnInterval) * SeaRandom.Range(ref randomState, 1 - configuration.SpawnIntervalVariation, 1 + configuration.SpawnIntervalVariation);
+        private void SpawnRandom(float ahead)
         {
+            Vector2 flow = ocean.GetDriftDirection(building.CellToWorld(Vector2Int.zero), .3f);
+            Vector2 side = new Vector2(-flow.y, flow.x);
             Vector3 origin3 = building.CellToWorld(Vector2Int.zero);
             Vector2 origin = new Vector2(origin3.x, origin3.z);
             float lateralMin = float.PositiveInfinity, lateralMax = float.NegativeInfinity, upstream = float.PositiveInfinity;
@@ -107,21 +114,37 @@ namespace RaftGame.Salvage
                 lateralMax = Mathf.Max(lateralMax, Vector2.Dot(relative, side) + sideExtent);
                 upstream = Mathf.Min(upstream, Vector2.Dot(relative, flow) - flowExtent);
             }
-            float lateral = lane < 0 ? lateralMin - configuration.LaneGap : lateralMax + configuration.LaneGap;
-            Vector2 point = origin + side * lateral + flow * (upstream - ahead);
-            ResourceType type = sequence % 3 == 1 ? ResourceType.Scrap : ResourceType.Wood;
-            Spawn(type, new Vector3(point.x, 0, point.y));
+            for (int attempt = 0; attempt < 12; attempt++)
+            {
+                float lane = SeaRandom.Value(ref randomState);
+                float lateral = lane < .35f ? lateralMin - SeaRandom.Range(ref randomState, .65f, 1.55f) : lane < .7f ? lateralMax + SeaRandom.Range(ref randomState, .65f, 1.55f) : SeaRandom.Range(ref randomState, lateralMin, lateralMax);
+                Vector2 point = origin + side * lateral + flow * (upstream - ahead - SeaRandom.Range(ref randomState, 0, 2));
+                Vector3 position = new Vector3(point.x, 0, point.y);
+                if (DeckPathfinder.HasDeck(building.Cells, building.WorldToCell(position))) continue;
+                bool overlap = false; foreach (var item in items) if (Vector2.Distance(new Vector2(item.transform.position.x, item.transform.position.z), point) < 1.5f) { overlap = true; break; }
+                if (overlap) continue;
+                float kindRoll = SeaRandom.Value(ref randomState);
+                FloatingKind kind = kindRoll < .35f ? FloatingKind.Wood : kindRoll < .55f ? FloatingKind.Scrap : kindRoll < .75f ? FloatingKind.Bottle : FloatingKind.SupplyCrate;
+                if (!Supports(kind)) kind = FloatingKind.Wood;
+                Spawn(kind, position); return;
+            }
         }
 
-        public FloatingResource Spawn(ResourceType type, Vector3 worldPosition)
+        public bool Supports(FloatingKind kind) => Prefab(kind) != null;
+        private GameObject Prefab(FloatingKind kind) => kind == FloatingKind.Wood ? configuration.WoodPrefab : kind == FloatingKind.Scrap ? configuration.ScrapPrefab : kind == FloatingKind.Bottle ? configuration.BottlePrefab : kind == FloatingKind.SupplyCrate ? configuration.SupplyCratePrefab : null;
+        public FloatingResource Spawn(ResourceType type, Vector3 worldPosition) => type == ResourceType.Wood ? Spawn(FloatingKind.Wood, worldPosition) : type == ResourceType.Scrap ? Spawn(FloatingKind.Scrap, worldPosition) : type == ResourceType.Water ? Spawn(FloatingKind.Bottle, worldPosition) : null;
+        public FloatingResource Spawn(FloatingKind kind, Vector3 worldPosition) => SpawnItem(kind, worldPosition, false);
+        private FloatingResource SpawnItem(FloatingKind kind, Vector3 worldPosition, bool restoring)
         {
-            if (!IsInitialized || items.Count >= configuration.MaximumItems || (type != ResourceType.Wood && type != ResourceType.Scrap)) return null;
-            GameObject prefab = type == ResourceType.Wood ? configuration.WoodPrefab : configuration.ScrapPrefab;
+            if (!IsInitialized || (!restoring && items.Count >= configuration.MaximumItems) || !Supports(kind)) return null;
+            GameObject prefab = Prefab(kind);
             FloatingResource item = Instantiate(prefab, transform).GetComponent<FloatingResource>();
-            item.Type = type;
-            item.Amount = type == ResourceType.Wood ? configuration.WoodPerItem : configuration.ScrapPerItem;
+            item.Kind = kind;
+            item.Amount = kind == FloatingKind.Wood ? configuration.WoodPerItem : kind == FloatingKind.Scrap ? configuration.ScrapPerItem : 1;
             item.Id = ++sequence;
-            item.Phase = (sequence * 1.618f) % (2f * Mathf.PI);
+            item.Phase = SeaRandom.Range(ref randomState, 0, Mathf.PI * 2);
+            item.DriftMultiplier = SeaRandom.Range(ref randomState, .75f, 1.25f);
+            item.Windage = SeaRandom.Range(ref randomState, kind == FloatingKind.Bottle ? .5f : .1f, kind == FloatingKind.Bottle ? .9f : .5f);
             worldPosition.y = ocean.GetSurfaceHeight(worldPosition) + 0.08f;
             item.transform.position = worldPosition;
             item.ShowMarker(false);
@@ -137,7 +160,7 @@ namespace RaftGame.Salvage
             item.IsMarked = marked;
             if (!marked) item.ClaimOwner = null;
             item.ShowMarker(marked);
-            Message = marked ? "已标记" + (item.Type == ResourceType.Wood ? "木材" : "废料") + "，船员会在够得着时打捞" : "已取消打捞标记";
+            Message = marked ? "已标记" + Name(item.Kind) + "，船员会在够得着时打捞" : "已取消打捞标记";
             Notify();
             return true;
         }
@@ -187,8 +210,9 @@ namespace RaftGame.Salvage
         {
             if (!IsClaimValid(item, owner) || !IsInReach(approach, item)) return false;
             item.Collecting = true; // Inventory callbacks cannot re-enter collection and credit the same item twice.
-            if (!resources.Add(item.Type, item.Amount)) { item.Collecting = false; return false; }
-            Message = "收集到" + (item.Type == ResourceType.Wood ? "木材" : "废料") + " × " + item.Amount;
+            bool received = item.Kind == FloatingKind.SupplyCrate ? loot != null && loot.OpenCrate() : resources.Add(item.Type, item.Amount);
+            if (!received) { item.Collecting = false; return false; }
+            Message = item.Kind == FloatingKind.SupplyCrate ? loot.Message : "收集到" + Name(item.Kind) + " × " + item.Amount;
             Remove(item);
             return true;
         }
@@ -205,6 +229,30 @@ namespace RaftGame.Salvage
         }
 
         private void Notify() { Version++; Changed?.Invoke(); }
+        public List<FloatingSave> CaptureItems()
+        {
+            var result = new List<FloatingSave>();
+            foreach (var item in items) if (item != null) result.Add(new FloatingSave { Type = item.Type, Kind = item.Kind, Position = item.transform.position, Age = item.Age, Phase = item.Phase, Marked = item.IsMarked, DriftMultiplier = item.DriftMultiplier, Windage = item.Windage });
+            return result;
+        }
+        public void RestoreItems(List<FloatingSave> entries, float timer, int savedRandom = 0, int savedSequence = 0)
+        {
+            foreach (var item in items) if (item != null) { item.gameObject.SetActive(false); Destroy(item.gameObject); }
+            items.Clear(); sequence = 0; spawnTimer = timer;
+            foreach (var entry in entries)
+            {
+                var item = SpawnItem(entry.Kind, entry.Position, true);
+                if (item == null) continue;
+                item.Age = entry.Age; item.Phase = entry.Phase; item.transform.position = entry.Position;
+                item.DriftMultiplier = entry.DriftMultiplier; item.Windage = entry.Windage;
+                item.transform.rotation = Quaternion.Euler(Mathf.Sin(item.Age + item.Phase) * 3f,
+                    item.Phase * Mathf.Rad2Deg, Mathf.Cos(item.Age * .8f + item.Phase) * 3f);
+                SetMarked(item, entry.Marked);
+            }
+            if (savedRandom != 0) randomState = savedRandom;
+            sequence = savedSequence > 0 ? savedSequence : items.Count; Notify();
+        }
+        private static string Name(FloatingKind kind) => kind == FloatingKind.Wood ? "木材" : kind == FloatingKind.Scrap ? "废料" : kind == FloatingKind.Bottle ? "水瓶" : "补给箱";
         public void Shutdown()
         {
             foreach (FloatingResource item in items) if (item != null) Destroy(item.gameObject);

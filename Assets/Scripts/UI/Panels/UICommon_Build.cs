@@ -1,9 +1,14 @@
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace RaftGame.UI
 {
     public sealed class UICommon_Build : UIView
     {
+        public Text DayClockText;
+        public Text DayPhaseText;
+        public RectTransform DayProgressFill;
+        public DayPhaseIcon DayIcon;
         public const string Address = nameof(UICommon_Build);
         public Button BuildButton;
         public Button CancelButton;
@@ -24,5 +29,43 @@ namespace RaftGame.UI
         public Text NeedsText;
         public Button TargetMinusButton;
         public Button TargetPlusButton;
+        public RectTransform SatietyFill;
+        public Button PauseButton;
+        public Button SpeedOneButton;
+        public Button SpeedTwoButton;
+        public Button SpeedFourButton;
+        public Text TimeText;
+        public Text PauseButtonText;
+        public Text WaterText;
+        public Text FoodTargetText;
+        public Text WaterTargetText;
+        public Button WaterButton;
+        public Button WaterTargetMinusButton;
+        public Button WaterTargetPlusButton;
+        public RectTransform HydrationFill;
+        public ResourceTile[] ResourceTiles;
+        public Button SaveButton;
+        public Button LoadButton;
+        public Text SaveStatusText;
+        public GameObject CatalogOverlay;
+        public RectTransform CatalogWindow;
+        public Button CatalogCloseButton;
+        public Button BasicsCategoryButton;
+        public Button ProductionCategoryButton;
+        public Button LivingCategoryButton;
+        public Button DeckRecipeButton;
+        public Text CatalogHeading;
+        public Text CatalogEmptyText;
+        public Text CatalogHint;
+        public Text DeckRecipeCost;
+        public Text GrillRecipeCost;
+        public Text PurifierRecipeCost;
+        public Text DeckScrapCost;
+        public Text GrillScrapCost;
+        public Text PurifierScrapCost;
+        public GameObject LootNotice;
+        public Text LootText;
+        public RectTransform CurrentArrow;
+        public RectTransform WindArrow;
     }
 }

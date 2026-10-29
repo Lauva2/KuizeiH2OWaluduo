@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34f23ebc2fbc4372a6e43eab1a9adf72, type: 3}
+  m_Name: OceanLife_Default
+  m_EditorClassIdentifier:
+  FishPrefab: {fileID: 7835137422892608252, guid: 41de38dd257b9464fbd59aa1373ff1b3, type: 3}
+  CoralFishPrefab: {fileID: 5239419613990145744, guid: 626783093417e7d47b7242ce3d3f4794, type: 3}
+  BlueFishPrefab: {fileID: 7561609485096091701, guid: 9dabab394f830f2428a366ac7b2c1da1, type: 3}
+  Schools: 4
+  FishPerSchool: 4
+  Seed: 75931
+  MinimumRadius: 5.5
+  MaximumRadius: 11.5
+  SwimDepth: 0.55
+  SwimSpeed: 0.7
+  SilverFish: {r: 0.7, g: 0.83, b: 0.74, a: 1}
+  BlueFish: {r: 0.43, g: 0.76, b: 0.81, a: 1}
+  CoralFish: {r: 0.95, g: 0.68, b: 0.35, a: 1}

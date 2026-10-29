@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace RaftGame.Crew
 {
-    public enum CrewActivity { Idle, Walking, Constructing, WaitingForAccess, Gathering, WaitingForMaterials, WaitingForSalvage, Fishing, Cooking, Eating }
+    public enum CrewActivity { Idle, Walking, Constructing, WaitingForAccess, Gathering, WaitingForMaterials, WaitingForSalvage, Fishing, Cooking, Eating, Purifying, Drinking }
 
     /// <summary>Procedural presentation only. CrewManager owns movement, tasks and progress.</summary>
     public sealed class CrewView : MonoBehaviour
@@ -21,6 +21,7 @@ namespace RaftGame.Crew
         [SerializeField] private Transform bobber;
         [SerializeField] private GameObject cookingTool;
         [SerializeField] private GameObject mealFood;
+        public GameObject DrinkCup;
         private Camera sceneCamera;
         private float animationTime;
         private Vector3 bodyRest;
@@ -39,8 +40,8 @@ namespace RaftGame.Crew
             bool working = activity == CrewActivity.Constructing;
             bool gathering = activity == CrewActivity.Gathering;
             bool fishing = activity == CrewActivity.Fishing;
-            bool cooking = activity == CrewActivity.Cooking;
-            bool eating = activity == CrewActivity.Eating;
+            bool cooking = activity == CrewActivity.Cooking || activity == CrewActivity.Purifying;
+            bool eating = activity == CrewActivity.Eating || activity == CrewActivity.Drinking;
             float stride = walking ? Mathf.Sin(animationTime * 10f) * 28f : 0f;
             leftLeg.localRotation = Quaternion.Euler(stride, 0, 0);
             rightLeg.localRotation = Quaternion.Euler(-stride, 0, 0);
@@ -50,8 +51,9 @@ namespace RaftGame.Crew
                 cooking ? -55f + Mathf.Sin(animationTime * 4f) * 12f : eating ? -100f + Mathf.Sin(animationTime * 4f) * 12f : stride * 0.65f, 0, 6f);
             body.localPosition = bodyRest + Vector3.up * (walking ? Mathf.Abs(Mathf.Sin(animationTime * 10f)) * 0.025f : Mathf.Sin(animationTime * 2f) * 0.008f);
             hammer.SetActive(working);
-            if (cookingTool != null) cookingTool.SetActive(cooking);
-            if (mealFood != null) mealFood.SetActive(eating);
+            if (cookingTool != null) cookingTool.SetActive(activity == CrewActivity.Cooking);
+            if (mealFood != null) mealFood.SetActive(activity == CrewActivity.Eating);
+            if (DrinkCup != null) DrinkCup.SetActive(activity == CrewActivity.Drinking);
             if (fishingRod != null) fishingRod.SetActive(fishing);
             if (fishingLine != null) fishingLine.gameObject.SetActive(fishing);
             if (bobber != null) bobber.gameObject.SetActive(fishing);

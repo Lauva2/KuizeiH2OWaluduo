@@ -11,6 +11,20 @@ namespace RaftGame.Ocean
         private Transform followTarget;
         private MaterialPropertyBlock properties;
         private float elapsedTime;
+        private float daylight = 1, twilight;
+        public Color LitDeepColor => Color.Lerp(Color.Lerp(new Color(.018f, .075f, .16f), configuration.DeepColor, daylight), new Color(.11f, .22f, .31f), twilight * .3f);
+        public Color LitShallowColor => Color.Lerp(Color.Lerp(new Color(.06f, .24f, .30f), configuration.ShallowColor, daylight), new Color(.30f, .46f, .43f), twilight * .3f);
+        public void SetLighting(float day, float dusk)
+        { daylight = Mathf.Clamp01(day); twilight = Mathf.Clamp01(dusk); if (IsInitialized) WriteProperties(); }
+        private Color LitReflectionColor => Color.Lerp(Color.Lerp(new Color(.14f, .34f, .48f), configuration.ReflectionColor, daylight), new Color(.82f, .56f, .38f), twilight * .45f);
+        private Color LitFoamColor => Color.Lerp(new Color(.30f, .51f, .60f), configuration.FoamColor, daylight);
+        public void WriteSubmergedProperties(MaterialPropertyBlock target, Vector3 position)
+        {
+            target.SetColor("_WaterTint", Color.Lerp(LitShallowColor, LitDeepColor, GetDeepWaterBlend(position)));
+            target.SetColor("_ReflectionColor", LitReflectionColor); target.SetColor("_FoamColor", LitFoamColor);
+            target.SetFloat("_FishDepth", Mathf.Max(0, GetSurfaceHeight(position) - position.y)); target.SetFloat("_OceanTime", elapsedTime);
+            target.SetVector("_SurfaceDetails", new Vector4(configuration.WaveA.x, configuration.WaveA.y, configuration.RippleScale, configuration.RippleStrength));
+        }
 
         private static readonly int OceanTime = Shader.PropertyToID("_OceanTime");
         private static readonly int WaveA = Shader.PropertyToID("_WaveA");
@@ -27,11 +41,25 @@ namespace RaftGame.Ocean
         private static readonly int ContactWidth = Shader.PropertyToID("_ContactFoamWidth");
         private static readonly int ContactStrength = Shader.PropertyToID("_ContactFoamStrength");
         private static readonly int SunGlint = Shader.PropertyToID("_SunGlint");
+        private static readonly int ReflectionStrength = Shader.PropertyToID("_ReflectionStrength");
         private static readonly int ShallowArea = Shader.PropertyToID("_ShallowArea");
         private static readonly int DepthTransition = Shader.PropertyToID("_DepthTransition");
 
         public bool IsInitialized { get; private set; }
         public float ElapsedTime => elapsedTime;
+        public Vector2 CurrentDirection => Rotate(configuration.CurrentDirection.sqrMagnitude > .001f ? configuration.CurrentDirection.normalized : Vector2.down,
+            Mathf.Sin(elapsedTime / Mathf.Max(20, configuration.CurrentTurnPeriod) * Mathf.PI * 2) * configuration.CurrentTurnDegrees);
+        public Vector2 WindDirection => Rotate(configuration.WindDirection.sqrMagnitude > .001f ? configuration.WindDirection.normalized : Vector2.right,
+            Mathf.Sin(elapsedTime / Mathf.Max(30, configuration.CurrentTurnPeriod * 1.7f) * Mathf.PI * 2 + .8f) * 55);
+        public Vector2 GetDriftDirection(Vector3 position, float windage)
+        {
+            Vector2 direction = CurrentDirection + WindDirection * (configuration.WindInfluence * Mathf.Clamp01(windage));
+            float eddy = (Mathf.PerlinNoise(position.x * .035f + 43, position.z * .035f + elapsedTime * .001f) - .5f) * 24;
+            return Rotate(direction.normalized, eddy);
+        }
+        private static Vector2 Rotate(Vector2 direction, float degrees)
+        { float angle = degrees * Mathf.Deg2Rad; return new Vector2(direction.x * Mathf.Cos(angle) - direction.y * Mathf.Sin(angle), direction.x * Mathf.Sin(angle) + direction.y * Mathf.Cos(angle)); }
+        public void RestoreTime(float time) { elapsedTime = time; Tick(0); }
 
         public bool Initialize(OceanConfig config, Transform target)
         {
@@ -77,16 +105,17 @@ namespace RaftGame.Ocean
             properties.SetVector(WaveB, configuration.WaveB);
             properties.SetVector(WaveC, configuration.WaveC);
             properties.SetFloat(WaveSpeed, configuration.WaveSpeed);
-            properties.SetColor(DeepColor, configuration.DeepColor);
-            properties.SetColor(ShallowColor, configuration.ShallowColor);
-            properties.SetColor(FoamColor, configuration.FoamColor);
-            properties.SetColor(ReflectionColor, configuration.ReflectionColor);
+            properties.SetColor(DeepColor, LitDeepColor);
+            properties.SetColor(ShallowColor, LitShallowColor);
+            properties.SetColor(FoamColor, LitFoamColor);
+            properties.SetColor(ReflectionColor, LitReflectionColor);
             properties.SetFloat(RippleStrength, configuration.RippleStrength);
             properties.SetFloat(RippleScale, configuration.RippleScale);
             properties.SetFloat(CrestFoam, configuration.CrestFoam);
             properties.SetFloat(ContactWidth, configuration.ContactFoamWidth);
             properties.SetFloat(ContactStrength, configuration.ContactFoamStrength);
-            properties.SetFloat(SunGlint, configuration.SunGlint);
+            properties.SetFloat(SunGlint, configuration.SunGlint * Mathf.Lerp(.18f, 1, daylight));
+            properties.SetFloat(ReflectionStrength, configuration.ReflectionStrength);
             properties.SetVector(ShallowArea, new Vector4(configuration.ShallowCenter.x, configuration.ShallowCenter.y,
                 configuration.ShallowRadii.x, configuration.ShallowRadii.y));
             properties.SetVector(DepthTransition, new Vector4(configuration.DepthTransitionWidth,

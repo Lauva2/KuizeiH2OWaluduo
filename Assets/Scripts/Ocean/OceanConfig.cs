@@ -13,15 +13,15 @@ namespace RaftGame.Ocean
         [Min(1f)] public float FollowStep = 16f;
 
         [Header("Palette")]
-        public Color DeepColor = new Color(0.025f, 0.16f, 0.34f);
-        public Color ShallowColor = new Color(0.12f, 0.70f, 0.66f);
+        public Color DeepColor = new Color(0.02f, 0.22f, 0.43f);
+        public Color ShallowColor = new Color(0.16f, 0.68f, 0.63f);
         public Color FoamColor = new Color(0.82f, 0.96f, 0.91f);
-        public Color ReflectionColor = new Color(0.48f, 0.80f, 0.83f);
+        public Color ReflectionColor = new Color(0.29f, 0.67f, 0.80f);
 
         [Header("Sea regions (fixed world X/Z coordinates)")]
         public Vector2 ShallowCenter = new Vector2(-28f, 12f);
         public Vector2 ShallowRadii = new Vector2(29f, 40f);
-        [Min(0.1f)] public float DepthTransitionWidth = 14f;
+        [Min(0.1f)] public float DepthTransitionWidth = 24f;
         [Min(0f)] public float BoundaryVariation = 4f;
         [Min(0.1f)] public float ShallowDepth = 3f;
         [Min(1f)] public float DeepDepth = 45f;
@@ -33,14 +33,22 @@ namespace RaftGame.Ocean
         [Range(0f, 2f)] public float WaveSpeed = 0.45f;
 
         [Header("Surface details")]
-        [Range(0f, 1f)] public float RippleStrength = 0.32f;
-        [Range(0.1f, 2f)] public float RippleScale = 0.8f;
-        [Range(0f, 1f)] public float CrestFoam = 0.22f;
-        [Range(0.05f, 2f)] public float ContactFoamWidth = 0.5f;
+        [Range(0f, 1f)] public float RippleStrength = 0.45f;
+        [Range(0.1f, 2f)] public float RippleScale = 1.15f;
+        [Range(0f, 1f)] public float CrestFoam = 0.12f;
+        [Range(0.05f, 2f)] public float ContactFoamWidth = 0.4f;
         [Range(0f, 1f)] public float ContactFoamStrength = 0.75f;
-        [Range(0f, 1f)] public float SunGlint = 0.32f;
+        [Range(0f, 1f)] public float SunGlint = 0.6f;
+        [Range(0f, 1f)] public float ReflectionStrength = 0.38f;
 
         public float MaximumWaveHeight => Mathf.Abs(WaveA.w) + Mathf.Abs(WaveB.w) + Mathf.Abs(WaveC.w);
+
+        [Header("Drifting supplies: current and wind")]
+        public Vector2 CurrentDirection = new Vector2(.25f, -1f);
+        public Vector2 WindDirection = new Vector2(1f, .3f);
+        [Min(20)] public float CurrentTurnPeriod = 100f;
+        [Range(0, 120)] public float CurrentTurnDegrees = 70f;
+        [Range(0, 1)] public float WindInfluence = .35f;
 
         private void OnValidate()
         {

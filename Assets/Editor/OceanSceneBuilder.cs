@@ -164,6 +164,7 @@ namespace RaftGame.Editor
             m.SetFloat("_ContactFoamWidth", config.ContactFoamWidth);
             m.SetFloat("_ContactFoamStrength", config.ContactFoamStrength);
             m.SetFloat("_SunGlint", config.SunGlint);
+            m.SetFloat("_ReflectionStrength", config.ReflectionStrength);
             m.SetFloat("_OceanTime", -1f);
             EditorUtility.SetDirty(m);
         }

@@ -2,7 +2,8 @@ using UnityEngine;
 
 namespace RaftGame.Building
 {
-    public enum BuildTool { None, DeckBlueprint, CancelBlueprint, GrillBlueprint }
+    public enum BuildTool { None, DeckBlueprint, CancelBlueprint, GrillBlueprint, PurifierBlueprint }
+    public enum FacilityKind { Grill, Purifier }
     public enum DeckState { Planned, Constructing, Complete }
 
     public sealed class DeckCell

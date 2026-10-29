@@ -37,12 +37,16 @@ namespace RaftGame.Crew
         private MealSession mealSession;
         private int observedProduction = -1;
         private int observedNeeds = -1;
+        private WaterManager water;
+        private PurifyingSession purifyingSession;
+        private DrinkSession drinkSession;
+        private int observedWater = -1;
 
         public bool IsInitialized { get; private set; }
         public CrewActivity Activity { get; private set; }
         public Vector2Int CurrentCell { get; private set; }
-        public Vector2Int? TaskCell => task?.Coordinate ?? grillTask?.Coordinate ?? cookingSession?.Grill.Coordinate;
-        public float WorkProgress => mealSession != null ? mealSession.Progress : cookingSession != null ? cookingSession.Progress :
+        public Vector2Int? TaskCell => task?.Coordinate ?? grillTask?.Coordinate ?? cookingSession?.Grill.Coordinate ?? purifyingSession?.Purifier.Coordinate;
+        public float WorkProgress => drinkSession != null ? drinkSession.Progress : purifyingSession != null ? purifyingSession.Progress : mealSession != null ? mealSession.Progress : cookingSession != null ? cookingSession.Progress :
             fishingSession != null ? fishingSession.Progress : salvageTask != null ? gatherProgress :
             grillTask != null ? grillTask.ConstructionProgress : task != null ? task.ConstructionProgress : 0f;
         public Transform Worker => view != null ? view.transform : null;
@@ -53,13 +57,15 @@ namespace RaftGame.Crew
             Activity == CrewActivity.Fishing ? $"船员：垂钓中 {Mathf.FloorToInt(WorkProgress * 100f)}%" :
             Activity == CrewActivity.Cooking ? $"船员：烤鱼中 {Mathf.FloorToInt(WorkProgress * 100f)}%" :
             Activity == CrewActivity.Eating ? "船员：享用烤鱼" :
-            Activity == CrewActivity.Walking ? (cookingSession != null ? "船员：前往烤架" : fishingSession != null ? "船员：前往钓鱼点" : salvageTask != null ? "船员：前往打捞点" : task != null || grillTask != null ? "船员：前往施工点" : "船员：返回甲板") :
+            Activity == CrewActivity.Drinking ? "船员：饮用淡水" :
+            Activity == CrewActivity.Purifying ? $"船员：净水中 {Mathf.FloorToInt(WorkProgress * 100)}%" :
+            Activity == CrewActivity.Walking ? (purifyingSession != null ? "船员：前往净水器" : cookingSession != null ? "船员：前往烤架" : fishingSession != null ? "船员：前往钓鱼点" : salvageTask != null ? "船员：前往打捞点" : task != null || grillTask != null ? "船员：前往施工点" : "船员：返回甲板") :
             Activity == CrewActivity.WaitingForMaterials ? "船员：等待材料" :
             Activity == CrewActivity.WaitingForSalvage ? "船员：等待可打捞物资" :
             Activity == CrewActivity.WaitingForAccess ? "船员：等待通路" : "船员：待命";
 
         public bool Initialize(CrewConfig config, BuildManager buildManager, Camera camera, SalvageManager salvageManager = null,
-            FishingManager fishingManager = null, ProductionManager productionManager = null, NeedsManager needsManager = null)
+            FishingManager fishingManager = null, ProductionManager productionManager = null, NeedsManager needsManager = null, WaterManager waterManager = null)
         {
             if (IsInitialized) return true;
             if (config == null || config.CrewPrefab == null || config.CrewPrefab.GetComponent<CrewView>() == null ||
@@ -74,6 +80,7 @@ namespace RaftGame.Crew
             fishing = fishingManager;
             production = productionManager;
             needs = needsManager;
+            water = waterManager;
             CurrentCell = config.SpawnCell;
             if (!DeckPathfinder.IsWalkable(building.Cells, CurrentCell))
             {
@@ -103,7 +110,7 @@ namespace RaftGame.Crew
             if (fishingSession != null && !fishing.IsSessionValid(fishingSession, this)) ReleaseTask();
             if (dt > 0f)
             {
-                if (mealSession == null && needs != null && needs.ShouldEat && HasAssignment()) ReleaseTask();
+                if (mealSession == null && drinkSession == null && needs != null && (needs.ShouldEat || needs.ShouldDrink) && HasAssignment()) ReleaseTask();
                 if (task != null && (!building.Cells.TryGetValue(task.Coordinate, out DeckCell current) ||
                     !ReferenceEquals(task, current) || current.State != (ownsConstruction ? DeckState.Constructing : DeckState.Planned)))
                     ReleaseTask();
@@ -111,7 +118,8 @@ namespace RaftGame.Crew
                     !ReferenceEquals(grillTask, currentGrill) || currentGrill.State != (ownsConstruction ? DeckState.Constructing : DeckState.Planned))) ReleaseTask();
                 if (!ReferenceEquals(salvageTask, null) && !salvage.IsClaimValid(salvageTask, this)) ReleaseTask();
                 if (cookingSession != null && !production.IsValid(cookingSession, this)) ReleaseTask();
-                if ((fishingSession != null || cookingSession != null) && WorkChanged())
+                if (purifyingSession != null && !water.IsValid(purifyingSession, this)) ReleaseTask();
+                if ((fishingSession != null || cookingSession != null || purifyingSession != null) && WorkChanged())
                 {
                     Observe();
                     if (HasPriorityWork()) ReleaseTask();
@@ -124,6 +132,8 @@ namespace RaftGame.Crew
                 else if (Activity == CrewActivity.Fishing) Fish(workTime);
                 else if (Activity == CrewActivity.Cooking) Cook(workTime);
                 else if (Activity == CrewActivity.Eating) Eat(dt);
+                else if (Activity == CrewActivity.Drinking) Drink(dt);
+                else if (Activity == CrewActivity.Purifying) Purify(workTime);
                 else
                 {
                     retryTime -= dt;
@@ -131,7 +141,8 @@ namespace RaftGame.Crew
                         (needs != null && observedNeeds != needs.Version)) SelectTask();
                 }
             }
-            Vector3 workPosition = mealSession != null ? view.transform.position + Vector3.up :
+            Vector3 workPosition = drinkSession != null || mealSession != null ? view.transform.position + Vector3.up :
+                purifyingSession != null ? building.CellToWorld(purifyingSession.Purifier.Coordinate) + Vector3.up * 0.7f :
                 cookingSession != null ? building.CellToWorld(cookingSession.Grill.Coordinate) + Vector3.up * 0.7f :
                 fishingSession != null ? fishing.GetWaterPoint(fishingSession.Spot) :
                 salvageTask != null ? salvageTask.transform.position : grillTask != null ? building.CellToWorld(grillTask.Coordinate) :
@@ -143,9 +154,9 @@ namespace RaftGame.Crew
         private Vector3 FootPosition(Vector2Int cell) => building.CellToWorld(cell) + Vector3.up * configuration.FootOffset;
         private static bool Earlier(Vector2Int a, Vector2Int b) => a.x < b.x || (a.x == b.x && a.y < b.y);
 
-        private bool HasAssignment() => task != null || grillTask != null || salvageTask != null || fishingSession != null || cookingSession != null;
+        private bool HasAssignment() => task != null || grillTask != null || salvageTask != null || fishingSession != null || cookingSession != null || purifyingSession != null;
         private bool WorkChanged() => observedLayout != building.LayoutVersion || observedInventory != building.InventoryVersion ||
-            (salvage != null && observedSalvage != salvage.Version) || (production != null && observedProduction != production.Version);
+            (salvage != null && observedSalvage != salvage.Version) || (production != null && observedProduction != production.Version) || (water != null && observedWater != water.Version);
         private void Observe()
         {
             observedLayout = building.LayoutVersion; observedInventory = building.InventoryVersion;
@@ -153,14 +164,19 @@ namespace RaftGame.Crew
             observedFishing = fishing != null ? fishing.Version : 0;
             observedProduction = production != null ? production.Version : 0;
             observedNeeds = needs != null ? needs.Version : 0;
+            observedWater = water != null ? water.Version : 0;
         }
 
         private void SelectTask()
         {
             retryTime = Mathf.Max(0.1f, configuration.RetryInterval);
             Observe();
+            if (needs != null && needs.ShouldDrink && needs.Hydration <= needs.Satiety && (drinkSession = needs.TryBeginDrink(this)) != null)
+            { Activity = CrewActivity.Drinking; return; }
             if (needs != null && (mealSession = needs.TryBeginMeal(this)) != null)
             { Activity = CrewActivity.Eating; return; }
+            if (needs != null && (drinkSession = needs.TryBeginDrink(this)) != null)
+            { Activity = CrewActivity.Drinking; return; }
             DeckPathfinder.FindReachable(building.Cells, CurrentCell, out var parents, out var distances);
             if (salvage != null && salvage.TryFindTask(distances, this, out FloatingResource item, out Vector2Int salvageApproach) && salvage.TryClaim(item, this))
             {
@@ -188,11 +204,16 @@ namespace RaftGame.Crew
             }
             GrillCell chosenGrill = null;
             foreach (GrillCell candidate in building.Grills.Values)
-                if (candidate.State == DeckState.Planned && building.CanAffordGrill() && distances.TryGetValue(candidate.WorkCell, out int distance) &&
+                if (candidate.State == DeckState.Planned && building.CanAffordFacility(candidate.Kind) && distances.TryGetValue(candidate.WorkCell, out int distance) &&
                     (distance < bestDistance || (distance == bestDistance && chosen == null && (chosenGrill == null || Earlier(candidate.Coordinate, chosenGrill.Coordinate)))))
                 { chosenGrill = candidate; chosen = null; destination = candidate.WorkCell; bestDistance = distance; }
             if (chosen == null && chosenGrill == null)
             {
+                if (water != null && water.TryFindTask(distances, out GrillCell purifier))
+                {
+                    purifyingSession = water.TryAcquire(this, purifier);
+                    if (purifyingSession != null) { BeginRoute(parents, purifier.WorkCell); return; }
+                }
                 if (production != null && production.TryFindTask(distances, out GrillCell grill))
                 {
                     cookingSession = production.TryAcquire(this, grill);
@@ -232,7 +253,7 @@ namespace RaftGame.Crew
             foreach (DeckCell cell in building.Cells.Values)
                 if (cell.State == DeckState.Planned && building.CanAffordConstruction()) return true;
             foreach (GrillCell grill in building.Grills.Values)
-                if (grill.State == DeckState.Planned && building.CanAffordGrill()) return true;
+                if (grill.State == DeckState.Planned && building.CanAffordFacility(grill.Kind)) return true;
             return false;
         }
 
@@ -264,6 +285,12 @@ namespace RaftGame.Crew
         private void StartWork()
         {
             route = null;
+            if (purifyingSession != null)
+            {
+                if (!water.Begin(purifyingSession, this, CurrentCell)) { ReleaseTask(); return; }
+                Activity = CrewActivity.Purifying;
+                Face(building.CellToWorld(purifyingSession.Purifier.Coordinate) - view.transform.position, 1f); return;
+            }
             if (cookingSession != null)
             {
                 if (!production.Begin(cookingSession, this, CurrentCell)) { ReleaseTask(); return; }
@@ -340,16 +367,31 @@ namespace RaftGame.Crew
         {
             DeckPathfinder.FindReachable(building.Cells, CurrentCell, out _, out var distances);
             if (salvage != null && salvage.TryFindTask(distances, this, out _, out _)) return true;
-            bool affordDeck = building.CanAffordConstruction() || (cookingSession != null && production.CanYieldFor(cookingSession, building.DeckCost));
+            bool affordDeck = CanYieldFor(building.DeckCost) || building.CanAffordConstruction();
             if (affordDeck) foreach (DeckCell cell in building.Cells.Values)
                 if (cell.State == DeckState.Planned)
                     foreach (Vector2Int direction in DeckPathfinder.Directions)
                         if (distances.ContainsKey(cell.Coordinate + direction)) return true;
-            bool affordGrill = building.CanAffordGrill() || (cookingSession != null && production.CanYieldFor(cookingSession, building.GrillCost));
-            if (affordGrill) foreach (GrillCell grill in building.Grills.Values)
-                if (grill.State == DeckState.Planned && distances.ContainsKey(grill.WorkCell)) return true;
-            if (cookingSession == null && production != null && production.TryFindTask(distances, out _)) return true;
+            foreach (GrillCell grill in building.Grills.Values)
+                if (grill.State == DeckState.Planned && distances.ContainsKey(grill.WorkCell) &&
+                    (building.CanAffordFacility(grill.Kind) || CanYieldFor(building.FacilityCost(grill.Kind)))) return true;
+            if (purifyingSession == null && water != null && water.TryFindTask(distances, out _)) return true;
+            if (purifyingSession == null && cookingSession == null && production != null && production.TryFindTask(distances, out _)) return true;
             return false;
+        }
+        private bool CanYieldFor(RaftGame.Resources.ResourceCost cost) =>
+            (cookingSession != null && production.CanYieldFor(cookingSession, cost)) || (purifyingSession != null && water.CanYieldFor(purifyingSession, cost));
+        private void Purify(float deltaTime)
+        {
+            if (!water.Advance(purifyingSession, this, CurrentCell, deltaTime)) { ReleaseTask(); return; }
+            if (purifyingSession.Progress < 1) return;
+            purifyingSession = null; Activity = CrewActivity.Idle; retryTime = 0;
+        }
+        private void Drink(float deltaTime)
+        {
+            if (!needs.AdvanceDrink(drinkSession, this, deltaTime)) { ReleaseTask(); return; }
+            if (drinkSession.Progress < 1) return;
+            drinkSession = null; Activity = CrewActivity.Idle; retryTime = 0;
         }
 
         private void Cook(float deltaTime)
@@ -391,6 +433,10 @@ namespace RaftGame.Crew
             cookingSession = null;
             if (mealSession != null) needs.Cancel(mealSession, this);
             mealSession = null;
+            if (purifyingSession != null) water.Cancel(purifyingSession, this);
+            purifyingSession = null;
+            if (drinkSession != null) needs.CancelDrink(drinkSession, this);
+            drinkSession = null;
             ownsConstruction = false;
             retryTime = 0f;
             // If cancelled mid-step, return along that same safe segment before selecting a new route.
@@ -410,6 +456,11 @@ namespace RaftGame.Crew
             previousStatus = status;
             Changed?.Invoke();
         }
+        public void CancelAssignments() { ReleaseTask(); route = null; Activity = CrewActivity.Idle; }
+        public void RestorePosition(Vector2Int coordinate)
+        {
+            CurrentCell = coordinate; view.transform.position = FootPosition(coordinate); retryTime = 0; Observe(); PublishStatus();
+        }
 
         public void Shutdown()
         {
@@ -420,12 +471,15 @@ namespace RaftGame.Crew
             if (fishingSession != null && fishing != null) fishing.Cancel(fishingSession, this);
             if (cookingSession != null) production.Cancel(cookingSession, this);
             if (mealSession != null) needs.Cancel(mealSession, this);
+            if (purifyingSession != null) water.Cancel(purifyingSession, this);
+            if (drinkSession != null) needs.CancelDrink(drinkSession, this);
             building.IsCellOccupied = null;
             if (view != null) Destroy(view.gameObject);
             task = null;
             salvageTask = null;
             fishingSession = null;
             cookingSession = null; mealSession = null; grillTask = null;
+            purifyingSession = null; drinkSession = null;
             view = null;
             route = null;
             IsInitialized = false;

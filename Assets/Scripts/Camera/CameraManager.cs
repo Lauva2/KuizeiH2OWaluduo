@@ -16,6 +16,10 @@ namespace RaftGame.Core
 
         public Transform Focus => focus;
         public Camera SceneCamera => sceneCamera;
+        public float Yaw => yaw;
+        public float Size => size;
+        public void RestorePose(Vector3 center, float angle, float zoom)
+        { focus.position = center; yaw = angle; size = Mathf.Clamp(zoom, configuration.MinimumCameraSize, configuration.MaximumCameraSize); ApplyPose(); }
 
         public bool Initialize(GameConfig config)
         {

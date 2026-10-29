@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4efffccd575b42c6a8e1c11af71d5b22, type: 3}
+  m_Name: Loot_Default
+  m_EditorClassIdentifier:
+  FishWeight: 55
+  WaterWeight: 25
+  WoodWeight: 12
+  ScrapWeight: 8
+  WaterCatchGuarantee: 6
+  PurifierBlueprintChance: 0.12
+  BlueprintCrateGuarantee: 6

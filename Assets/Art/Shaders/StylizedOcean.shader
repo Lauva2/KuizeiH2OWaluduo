@@ -2,22 +2,23 @@ Shader "RaftGame/Stylized Ocean"
 {
     Properties
     {
-        _DeepColor ("Deep sea blue", Color) = (0.025, 0.16, 0.34, 1)
-        _ShallowColor ("Shallow sea turquoise", Color) = (0.12, 0.70, 0.66, 1)
+        _DeepColor ("Deep sea blue", Color) = (0.02, 0.22, 0.43, 1)
+        _ShallowColor ("Shallow sea turquoise", Color) = (0.16, 0.68, 0.63, 1)
         _ShallowArea ("Shallow center X/Z, radii X/Z", Vector) = (-28, 12, 29, 40)
-        _DepthTransition ("Transition width, boundary variation", Vector) = (14, 4, 0, 0)
+        _DepthTransition ("Transition width, boundary variation", Vector) = (24, 4, 0, 0)
         _FoamColor ("Foam", Color) = (0.82, 0.96, 0.91, 1)
-        _ReflectionColor ("Sky reflection", Color) = (0.48, 0.80, 0.83, 1)
+        _ReflectionColor ("Sky reflection", Color) = (0.29, 0.67, 0.80, 1)
         _WaveA ("Wave A: direction X/Z, length, amplitude", Vector) = (1, 0.35, 12, 0.14)
         _WaveB ("Wave B", Vector) = (-0.5, 1, 6.5, 0.075)
         _WaveC ("Wave C", Vector) = (0.2, 1, 3.1, 0.03)
         _WaveSpeed ("Wave speed", Float) = 0.45
-        _RippleStrength ("Ripple strength", Range(0, 1)) = 0.32
-        _RippleScale ("Ripple scale", Float) = 0.8
-        _CrestFoam ("Sparse crest foam", Range(0, 1)) = 0.22
-        _ContactFoamWidth ("Contact foam width", Float) = 0.5
+        _RippleStrength ("Ripple strength", Range(0, 1)) = 0.45
+        _RippleScale ("Ripple scale", Float) = 1.15
+        _CrestFoam ("Sparse crest foam", Range(0, 1)) = 0.12
+        _ContactFoamWidth ("Contact foam width", Float) = 0.4
         _ContactFoamStrength ("Contact foam opacity", Range(0, 1)) = 0.75
-        _SunGlint ("Sun glint", Range(0, 1)) = 0.32
+        _SunGlint ("Sun glint", Range(0, 1)) = 0.6
+        _ReflectionStrength ("Soft sky reflection", Range(0, 1)) = 0.38
         [HideInInspector] _OceanTime ("Managed time (-1 = editor time)", Float) = -1
     }
 
@@ -30,6 +31,7 @@ Shader "RaftGame/Stylized Ocean"
             Tags { "LightMode" = "ForwardBase" }
             ZWrite On
             Cull Back
+            Stencil { Ref 1 Comp Always Pass Replace }
 
             CGPROGRAM
             #pragma target 3.0
@@ -46,7 +48,7 @@ Shader "RaftGame/Stylized Ocean"
             float4 _WaveA, _WaveB, _WaveC;
             float4 _ShallowArea, _DepthTransition;
             float _WaveSpeed, _RippleStrength, _RippleScale, _CrestFoam;
-            float _ContactFoamWidth, _ContactFoamStrength, _SunGlint, _OceanTime;
+            float _ContactFoamWidth, _ContactFoamStrength, _SunGlint, _OceanTime, _ReflectionStrength;
 
             struct appdata { float4 vertex : POSITION; };
             struct v2f
@@ -54,7 +56,6 @@ Shader "RaftGame/Stylized Ocean"
                 float4 pos : SV_POSITION;
                 float3 worldPosition : TEXCOORD0;
                 float4 screenPosition : TEXCOORD1;
-                float3 waveNormal : TEXCOORD2;
                 float eyeDepth : TEXCOORD3;
                 SHADOW_COORDS(4)
                 UNITY_FOG_COORDS(5)
@@ -112,7 +113,6 @@ Shader "RaftGame/Stylized Ocean"
                 v.vertex = mul(unity_WorldToObject, float4(world, 1));
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.worldPosition = world;
-                o.waveNormal = normalize(float3(-slope.x, 1, -slope.y));
                 o.screenPosition = ComputeScreenPos(o.pos);
                 o.eyeDepth = -UnityObjectToViewPos(v.vertex).z;
                 TRANSFER_SHADOW(o);
@@ -135,54 +135,70 @@ Shader "RaftGame/Stylized Ocean"
             {
                 float time = OceanTime();
                 float2 p = i.worldPosition.xz;
-                float broad = Noise(p * 0.075 + float2(time * 0.012, -time * 0.009));
-                float detail = Noise(p * 0.23 - time * 0.018);
-                float2 rippleUV = p * _RippleScale;
-                float warp = Noise(rippleUV * 0.22 + time * 0.025);
-                float ripplePhase = rippleUV.x * 1.65 + sin(rippleUV.y * 1.2 + time * 0.25) * 1.4 + warp * 3;
-                float crossingPhase = rippleUV.y * 2.1 + sin(rippleUV.x * 0.8 - time * 0.18) - time * 0.3;
-                float2 microSlope = float2(cos(ripplePhase), cos(crossingPhase)) * _RippleStrength * 0.16;
-                float3 normal = normalize(i.waveNormal + float3(microSlope.x, 0, microSlope.y));
+                // Analytic fragment normals avoid faceted highlights on the large, coarse ocean mesh.
+                // The displaced geometry and CPU buoyancy retain the same three wave equations.
+                float height = 0;
+                float2 slope = 0;
+                EvaluateWave(_WaveA, p, time, height, slope);
+                EvaluateWave(_WaveB, p, time, height, slope);
+                EvaluateWave(_WaveC, p, time, height, slope);
+
+                float2 direction = normalize(_WaveA.xy);
+                float2 tangent = float2(-direction.y, direction.x);
+                float2 uv = float2(dot(p, direction), dot(p, tangent)) * _RippleScale;
+                float broad = Noise(p * 0.09 + float2(time * 0.016, -time * 0.012));
+                float breakup = Noise(uv * float2(0.38, 0.52) + float2(-time * 0.045, time * 0.025));
+                float warp = Noise(uv * 0.27 + float2(time * 0.025, -time * 0.018));
+                float phaseA = uv.x * 1.9 + sin(uv.y * 0.85 + time * 0.22) * 0.8 + warp * 3.2 - time * 0.7;
+                float phaseB = (uv.x * 0.65 + uv.y * 0.76) * 3.3 + warp * 2.4 + time * 0.55;
+                // Filter out subpixel ripples when zoomed out, including their specular response.
+                float rippleVisibility = 1 - smoothstep(0.35, 1.2, max(fwidth(phaseA), fwidth(phaseB)));
+                float2 microSlope = (direction * cos(phaseA) +
+                    (direction * 0.65 + tangent * 0.76) * cos(phaseB) * 0.45) *
+                    (_RippleStrength * 0.08 * rippleVisibility * lerp(0.18, 1, smoothstep(0.28, 0.72, breakup)));
+                float3 normal = normalize(float3(-slope.x - microSlope.x, 1, -slope.y - microSlope.y));
                 float3 viewDirection = normalize(lerp(_WorldSpaceCameraPos.xyz - i.worldPosition,
                     UNITY_MATRIX_V[2].xyz, unity_OrthoParams.w));
                 float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
                 float diffuse = saturate(dot(normal, lightDirection));
-                float fresnel = pow(1 - saturate(dot(normal, viewDirection)), 3);
-                float heightRange = max(0.001, _WaveA.w + _WaveB.w + _WaveC.w);
-                float waveHeight = i.worldPosition.y - unity_ObjectToWorld._m13;
-                float swell = saturate(0.5 + waveHeight / (heightRange * 2));
-                float palette = saturate(0.25 + broad * 0.24 + detail * 0.14 + swell * 0.36 +
-                    (normal.x - normal.z) * 0.65);
+                float facing = saturate(dot(normal, viewDirection));
+                float fresnel = 0.035 + 0.965 * pow(1 - facing, 5);
+                float heightRange = max(0.001, abs(_WaveA.w) + abs(_WaveB.w) + abs(_WaveC.w));
+                float swell = saturate(0.5 + height / (heightRange * 2));
                 float deepWater = DeepWaterBlend(p);
                 float3 color = lerp(_ShallowColor.rgb, _DeepColor.rgb, deepWater);
-                // Swells only modulate each region's color; they never change its shallow/deep identity.
-                color *= 0.86 + palette * 0.28;
+                // Gentle color variation keeps the water readable behind crew and floating supplies.
+                color *= 0.93 + broad * 0.08 + swell * 0.08;
                 UNITY_LIGHT_ATTENUATION(attenuation, i, i.worldPosition);
-                color *= (0.83 + diffuse * 0.17) * lerp(0.72, 1, attenuation);
-                color = lerp(color, _ReflectionColor.rgb, fresnel * 0.45);
+                color *= (0.86 + diffuse * 0.14) * lerp(0.78, 1, attenuation);
+                float3 reflected = reflect(-viewDirection, normal);
+                float skyBand = smoothstep(0.15, 0.85, reflected.y);
+                float reflection = _ReflectionStrength * (0.10 + skyBand * 0.20 + fresnel * 0.65);
+                color = lerp(color, _ReflectionColor.rgb, reflection);
 
-                // Broken, softly antialiased water ribbons rather than dense glitter/noise.
-                float2 swellDirection = normalize(_WaveA.xy);
-                float across = dot(p, swellDirection);
-                float along = dot(p, float2(-swellDirection.y, swellDirection.x));
-                float ribbonPhase = across * 2.7 + sin(along * 0.75 + warp * 3) * 0.65 + warp * 2 - time * 0.5;
-                float ribbons = abs(sin(ribbonPhase));
-                float lineWidth = max(fwidth(ribbons), 0.035);
-                float waterLine = 1 - smoothstep(0.015, 0.015 + lineWidth * 1.3, ribbons);
-                waterLine *= smoothstep(0.48, 0.76, Noise(float2(along * 0.9, across * 0.4) + time * 0.04)) * _RippleStrength;
-                color = lerp(color, _FoamColor.rgb, waterLine * 0.25);
+                // Broad translucent ripple shoulders with sparse broken tips, rather than white hatching.
+                float ripple = pow(saturate(sin(phaseA) * 0.5 + 0.5), 10);
+                float rippleMask = smoothstep(0.48, 0.78, breakup);
+                float waterLine = ripple * rippleMask * _RippleStrength * rippleVisibility;
+                color = lerp(color, _ReflectionColor.rgb, waterLine * 0.16);
+                float glimmer = ripple * ripple * smoothstep(0.62, 0.84, breakup);
+                glimmer += pow(saturate(sin(phaseB) * 0.5 + 0.5), 28) * smoothstep(0.72, 0.9, breakup) * 0.35;
+                color = lerp(color, _FoamColor.rgb, glimmer * _RippleStrength * 0.10 * rippleVisibility);
 
                 float3 halfDirection = normalize(lightDirection + viewDirection);
-                float glintMask = smoothstep(0.42, 0.78, Noise(p * 0.35 + time * 0.035));
-                float specular = pow(saturate(dot(normal, halfDirection)), 160) * _SunGlint * glintMask * 0.25;
-                color += _LightColor0.rgb * specular * attenuation * lerp(1, 0.45, deepWater);
+                float highlight = saturate(dot(normal, halfDirection));
+                float specular = (pow(highlight, 64) * 0.004 + pow(highlight, 220) * 0.06 * glimmer) * _SunGlint;
+                color += _LightColor0.rgb * specular * attenuation;
 
-                float crest = smoothstep(0.76, 0.98, swell) * smoothstep(0.45, 0.74, detail);
-                color = lerp(color, _FoamColor.rgb, crest * _CrestFoam);
+                float crest = smoothstep(0.82, 0.98, swell) * ripple * smoothstep(0.62, 0.86, breakup);
+                color = lerp(color, _FoamColor.rgb, crest * _CrestFoam * rippleVisibility);
                 float rawDepth = SAMPLE_DEPTH_TEXTURE_PROJ(_CameraDepthTexture, UNITY_PROJ_COORD(i.screenPosition));
                 float depthDifference = max(0, SceneEyeDepth(rawDepth) - i.eyeDepth);
                 float edge = 1 - smoothstep(0.02, max(0.03, _ContactFoamWidth), depthDifference);
-                float contact = edge * (0.65 + 0.35 * sin(ripplePhase + time)) * _ContactFoamStrength;
+                float contact = edge * (0.68 + breakup * 0.32) * _ContactFoamStrength;
+                // A second soft band breathes around hulls, while the waterline stays thin and readable.
+                float foamBand = exp(-abs(depthDifference - _ContactFoamWidth * 0.50) * 10 / max(0.05, _ContactFoamWidth));
+                contact += foamBand * rippleMask * _ContactFoamStrength * 0.18;
                 color = lerp(color, _FoamColor.rgb, saturate(contact));
                 UNITY_APPLY_FOG(i.fogCoord, color);
                 return fixed4(color, 1);

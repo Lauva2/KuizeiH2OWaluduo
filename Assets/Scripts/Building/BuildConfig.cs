@@ -15,6 +15,9 @@ namespace RaftGame.Building
         public GameObject GrillPrefab;
         public GameObject GrillBlueprintPrefab;
         public ResourceCost GrillCost = new ResourceCost(4, 2);
+        public GameObject PurifierPrefab;
+        public GameObject PurifierBlueprintPrefab;
+        public ResourceCost PurifierCost = new ResourceCost(6, 3);
         public Color ValidColor = new Color(0.15f, 0.91f, 0.70f, 0.38f);
         public Color InvalidColor = new Color(1f, 0.28f, 0.20f, 0.35f);
         public Color PlannedColor = new Color(0.24f, 0.74f, 0.95f, 0.28f);

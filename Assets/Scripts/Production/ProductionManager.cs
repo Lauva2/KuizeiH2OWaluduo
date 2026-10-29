@@ -49,7 +49,7 @@ namespace RaftGame.Production
             if (!IsInitialized || active != null || resources.GetTotal(ResourceType.CookedFish) >= Target || !resources.CanAfford(configuration.Recipe)) return false;
             int best = int.MaxValue;
             foreach (GrillCell grill in building.Grills.Values)
-                if (grill.State == DeckState.Complete && distances.TryGetValue(grill.WorkCell, out int distance) &&
+                if (grill.Kind == FacilityKind.Grill && grill.State == DeckState.Complete && distances.TryGetValue(grill.WorkCell, out int distance) &&
                     (distance < best || (distance == best && (result == null || grill.Coordinate.x < result.Coordinate.x ||
                     (grill.Coordinate.x == result.Coordinate.x && grill.Coordinate.y < result.Coordinate.y)))))
                 { result = grill; best = distance; }
@@ -63,7 +63,7 @@ namespace RaftGame.Production
             active = new CookingSession { Owner = owner, Grill = grill }; Notify(); return active;
         }
 
-        private bool IsGrillValid(GrillCell grill) => grill != null && grill.State == DeckState.Complete &&
+        private bool IsGrillValid(GrillCell grill) => grill != null && grill.Kind == FacilityKind.Grill && grill.State == DeckState.Complete &&
             building.Grills.TryGetValue(grill.Coordinate, out GrillCell current) && ReferenceEquals(grill, current);
 
         public bool IsValid(CookingSession session, object owner) => IsInitialized && session != null &&

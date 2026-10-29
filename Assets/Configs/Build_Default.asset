@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 64d5e4e573c54139a869b2bd93a71f81, type: 3}
   m_Name: Build_Default
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   TileSize: 2
   DeckHeight: 0.48
   MaximumCoordinate: 64
@@ -22,6 +22,7 @@ MonoBehaviour:
     Scrap: 1
     Fish: 0
     CookedFish: 0
+    Water: 0
   GrillPrefab: {fileID: 4603507305570546047, guid: c2994614fcb7630459fb73c9a8de7b9b, type: 3}
   GrillBlueprintPrefab: {fileID: 4995232204428950995, guid: 921760ddf34f6ed4ea9ad7c246a83235, type: 3}
   GrillCost:
@@ -29,6 +30,15 @@ MonoBehaviour:
     Scrap: 2
     Fish: 0
     CookedFish: 0
+    Water: 0
+  PurifierPrefab: {fileID: 4503571756076457247, guid: 18b8b62ca025a9b45ac4553c52be2feb, type: 3}
+  PurifierBlueprintPrefab: {fileID: 1583731705986810370, guid: 8885b5dab1fd0b5429fa31bc313d838b, type: 3}
+  PurifierCost:
+    Wood: 6
+    Scrap: 3
+    Fish: 0
+    CookedFish: 0
+    Water: 0
   ValidColor: {r: 0.15, g: 0.91, b: 0.7, a: 0.38}
   InvalidColor: {r: 1, g: 0.28, b: 0.2, a: 0.35}
   PlannedColor: {r: 0.24, g: 0.74, b: 0.95, a: 0.28}

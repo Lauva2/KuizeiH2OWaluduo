@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using RaftGame.Resources;
+using RaftGame.Core;
 
 namespace RaftGame.Building
 {
@@ -17,6 +18,7 @@ namespace RaftGame.Building
         private Camera sceneCamera;
         private GameObject preview;
         private GameObject grillPreview;
+        private GameObject purifierPreview;
         private MaterialPropertyBlock tint;
         private bool painting;
         private Vector2Int? paintedCell;
@@ -31,12 +33,24 @@ namespace RaftGame.Building
         public Func<Vector2Int, bool> IsCellOccupied { private get; set; }
         public int PlacementRotation { get; private set; }
         public int GrillCount { get; private set; }
+        public int PurifierCount { get; private set; }
+        public bool PurifierUnlocked { get; private set; }
+        public bool CatalogOpen { get; set; }
+        public void UnlockPurifier() { if (PurifierUnlocked) return; PurifierUnlocked = true; Feedback("发现净水器图纸 · 按 B 打开建造图册"); }
+        public void RestoreUnlocks(bool purifier) { PurifierUnlocked = purifier; CatalogOpen = false; if (!purifier && Tool == BuildTool.PurifierBlueprint) SetTool(BuildTool.None); Changed?.Invoke(); }
         public int CompletedCount { get; private set; }
-        public int BlueprintCount => cells.Count - CompletedCount + grills.Count - GrillCount;
+        public int BlueprintCount => cells.Count - CompletedCount + grills.Count - GrillCount - PurifierCount;
         public int LayoutVersion { get; private set; }
         public float TileSize => configuration.TileSize;
         public ResourceCost DeckCost => configuration.DeckCost;
         public ResourceCost GrillCost => configuration.GrillCost;
+        public ResourceCost PurifierCost => configuration.PurifierCost;
+        public int MaximumCoordinate => configuration.MaximumCoordinate;
+        public ResourceCost FacilityCost(FacilityKind kind) => kind == FacilityKind.Purifier ? configuration.PurifierCost : configuration.GrillCost;
+        public bool HasFacilityAssets(FacilityKind kind) => FacilityPrefab(kind, false) != null && FacilityPrefab(kind, true) != null;
+        private GameObject FacilityPrefab(FacilityKind kind, bool blueprint) => kind == FacilityKind.Purifier ?
+            (blueprint ? configuration.PurifierBlueprintPrefab : configuration.PurifierPrefab) :
+            (blueprint ? configuration.GrillBlueprintPrefab : configuration.GrillPrefab);
         public int InventoryVersion => resources != null ? resources.Version : 0;
         public event Action Changed;
 
@@ -56,6 +70,8 @@ namespace RaftGame.Building
             cells.Clear();
             grills.Clear();
             GrillCount = 0;
+            PurifierCount = 0;
+            PurifierUnlocked = false;
             CompletedCount = 0;
             foreach (DeckTile tile in raftRoot.GetComponentsInChildren<DeckTile>())
             {
@@ -82,6 +98,8 @@ namespace RaftGame.Building
                 grillPreview.SetActive(false);
             }
             IsInitialized = true;
+            if (config.PurifierBlueprintPrefab != null)
+            { purifierPreview = Instantiate(config.PurifierBlueprintPrefab, raftRoot); purifierPreview.name = "Purifier Placement Preview"; purifierPreview.SetActive(false); }
             LayoutVersion++;
             return true;
         }
@@ -89,14 +107,16 @@ namespace RaftGame.Building
         public void SetTool(BuildTool tool)
         {
             if (!IsInitialized) return;
+            if (tool == BuildTool.PurifierBlueprint && !PurifierUnlocked) { Feedback("尚未发现净水器图纸 · 试着打捞漂流补给箱"); return; }
             Tool = tool;
             painting = false;
             paintedCell = null;
             hoveredCell = null;
             preview.SetActive(false);
             if (grillPreview != null) grillPreview.SetActive(false);
+            if (purifierPreview != null) purifierPreview.SetActive(false);
             Message = tool == BuildTool.DeckBlueprint ? "点击或拖动放置蓝图；右键退出" :
-                tool == BuildTool.GrillBlueprint ? "选择甲板放烤架；R 旋转，箭头处保留操作位" :
+                tool == BuildTool.GrillBlueprint || tool == BuildTool.PurifierBlueprint ? "选择甲板放设施；R 旋转，箭头处保留操作位" :
                 tool == BuildTool.CancelBlueprint ? "点击撤销外围蓝图；右键退出" : "沿木筏边缘规划新的甲板";
             Changed?.Invoke();
         }
@@ -104,10 +124,11 @@ namespace RaftGame.Building
         public void Tick()
         {
             if (!IsInitialized) return;
-            if (Input.GetKeyDown(KeyCode.B)) SetTool(Tool == BuildTool.DeckBlueprint ? BuildTool.None : BuildTool.DeckBlueprint);
+            if (CatalogOpen) return;
             if (Input.GetKeyDown(KeyCode.X)) SetTool(Tool == BuildTool.CancelBlueprint ? BuildTool.None : BuildTool.CancelBlueprint);
             if (Input.GetKeyDown(KeyCode.G)) SetTool(Tool == BuildTool.GrillBlueprint ? BuildTool.None : BuildTool.GrillBlueprint);
-            if (Tool == BuildTool.GrillBlueprint && Input.GetKeyDown(KeyCode.R))
+            if (Input.GetKeyDown(KeyCode.P)) SetTool(Tool == BuildTool.PurifierBlueprint ? BuildTool.None : BuildTool.PurifierBlueprint);
+            if ((Tool == BuildTool.GrillBlueprint || Tool == BuildTool.PurifierBlueprint) && Input.GetKeyDown(KeyCode.R))
             { PlacementRotation = (PlacementRotation + 1) % 4; hoveredCell = null; }
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1)) SetTool(BuildTool.None);
             bool blocked = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) || Input.GetMouseButton(2);
@@ -117,23 +138,27 @@ namespace RaftGame.Building
             {
                 preview.SetActive(false);
                 if (grillPreview != null) grillPreview.SetActive(false);
+                if (purifierPreview != null) purifierPreview.SetActive(false);
                 return;
             }
 
-            bool grillTool = Tool == BuildTool.GrillBlueprint;
+            bool grillTool = Tool == BuildTool.GrillBlueprint || Tool == BuildTool.PurifierBlueprint;
+            FacilityKind kind = Tool == BuildTool.PurifierBlueprint ? FacilityKind.Purifier : FacilityKind.Grill;
             string reason;
-            bool valid = grillTool ? CanPlaceGrill(coordinate, PlacementRotation, out reason) :
+            bool valid = grillTool ? CanPlaceFacility(coordinate, PlacementRotation, kind, out reason) :
                 Tool == BuildTool.DeckBlueprint ? CanPlace(coordinate, out reason) : CanCancel(coordinate, out reason);
-            GameObject activePreview = grillTool && grillPreview != null ? grillPreview : preview;
+            GameObject facilityPreview = kind == FacilityKind.Purifier ? purifierPreview : grillPreview;
+            GameObject activePreview = grillTool && facilityPreview != null ? facilityPreview : preview;
             preview.SetActive(activePreview == preview);
             if (grillPreview != null) grillPreview.SetActive(activePreview == grillPreview);
+            if (purifierPreview != null) purifierPreview.SetActive(activePreview == purifierPreview);
             activePreview.transform.position = CellToWorld(coordinate) + Vector3.up * 0.035f;
             activePreview.transform.rotation = raftRoot.rotation * Quaternion.Euler(0, grillTool ? PlacementRotation * 90 : 0, 0);
             Tint(activePreview, valid ? configuration.ValidColor : configuration.InvalidColor);
             if (hoveredCell != coordinate)
             {
                 hoveredCell = coordinate;
-                Message = grillTool ? (valid ? "点击放置烤架；箭头处为操作位，R 旋转" : reason) : Tool == BuildTool.DeckBlueprint ?
+                Message = grillTool ? (valid ? "点击放置设施；箭头处为操作位，R 旋转" : reason) : Tool == BuildTool.DeckBlueprint ?
                     (valid ? "点击放置甲板蓝图" : PlacementReason(coordinate)) :
                     (valid ? "点击撤销这块蓝图" : CancellationReason(coordinate));
                 Changed?.Invoke();
@@ -142,7 +167,7 @@ namespace RaftGame.Building
             {
                 paintedCell = coordinate;
                 if (Tool == BuildTool.DeckBlueprint) TryPlaceBlueprint(coordinate, out _);
-                else if (grillTool) { TryPlaceGrillBlueprint(coordinate, PlacementRotation, out _); painting = false; }
+                else if (grillTool) { TryPlaceFacilityBlueprint(coordinate, PlacementRotation, kind, out _); painting = false; }
                 else TryCancelBlueprint(coordinate, out _);
             }
         }
@@ -257,18 +282,21 @@ namespace RaftGame.Building
 
         public bool CanAffordConstruction() => resources == null || resources.CanAfford(configuration.DeckCost);
         public bool CanAffordGrill() => resources == null || resources.CanAfford(configuration.GrillCost);
+        public bool CanAffordFacility(FacilityKind kind) => resources == null || resources.CanAfford(FacilityCost(kind));
 
-        public bool CanPlaceGrill(Vector2Int coordinate, int rotation, out string reason)
+        public bool CanPlaceGrill(Vector2Int coordinate, int rotation, out string reason) => CanPlaceFacility(coordinate, rotation, FacilityKind.Grill, out reason);
+        public bool CanPlaceFacility(Vector2Int coordinate, int rotation, FacilityKind kind, out string reason)
         {
-            if (!IsInitialized || configuration.GrillPrefab == null || configuration.GrillBlueprintPrefab == null)
-            { reason = "烤架配置尚未准备好"; return false; }
+            if (kind == FacilityKind.Purifier && !PurifierUnlocked) { reason = "尚未发现净水器图纸 · 从漂流补给箱中寻找"; return false; }
+            if (!IsInitialized || FacilityPrefab(kind, false) == null || FacilityPrefab(kind, true) == null)
+            { reason = "设施配置尚未准备好"; return false; }
             if (!cells.TryGetValue(coordinate, out DeckCell deck) || deck.State != DeckState.Complete || deck.IsBlocked || grills.ContainsKey(coordinate))
-            { reason = "烤架需要一格空闲的已建甲板"; return false; }
+            { reason = "设施需要一格空闲的已建甲板"; return false; }
             Vector2Int work = coordinate + GrillCell.WorkDirection(rotation);
             if (!cells.TryGetValue(work, out DeckCell approach) || approach.State != DeckState.Complete || approach.IsBlocked || grills.ContainsKey(work))
             { reason = "箭头处需要一格空闲甲板作为操作位"; return false; }
             foreach (GrillCell other in grills.Values)
-                if (other.WorkCell == coordinate) { reason = "这里是其他烤架的操作位"; return false; }
+                if (other.WorkCell == coordinate) { reason = "这里是其他设施的操作位"; return false; }
             // Reserve future footprints now, so several blueprints cannot jointly sever a route.
             var excluded = new HashSet<Vector2Int>(grills.Keys) { coordinate };
             if (!ConnectedWithout(excluded, true) || !ConnectedWithout(excluded, false))
@@ -293,23 +321,24 @@ namespace RaftGame.Building
             return remaining.Count == 0;
         }
 
-        public bool TryPlaceGrillBlueprint(Vector2Int coordinate, int rotation, out string reason)
+        public bool TryPlaceGrillBlueprint(Vector2Int coordinate, int rotation, out string reason) => TryPlaceFacilityBlueprint(coordinate, rotation, FacilityKind.Grill, out reason);
+        public bool TryPlaceFacilityBlueprint(Vector2Int coordinate, int rotation, FacilityKind kind, out string reason)
         {
-            if (!CanPlaceGrill(coordinate, rotation, out reason)) { Feedback(reason); return false; }
-            var visual = Instantiate(configuration.GrillBlueprintPrefab, raftRoot);
-            var cell = new GrillCell(coordinate, rotation, visual);
-            visual.name = $"Grill Blueprint [{coordinate.x}, {coordinate.y}]";
+            if (!CanPlaceFacility(coordinate, rotation, kind, out reason)) { Feedback(reason); return false; }
+            var visual = Instantiate(FacilityPrefab(kind, true), raftRoot);
+            var cell = new GrillCell(coordinate, rotation, visual, kind);
+            visual.name = $"{kind} Blueprint [{coordinate.x}, {coordinate.y}]";
             visual.transform.position = CellToWorld(coordinate);
             visual.transform.rotation = raftRoot.rotation * Quaternion.Euler(0, cell.Rotation * 90, 0);
             Tint(visual, configuration.PlannedColor);
             grills.Add(coordinate, cell); LayoutVersion++;
-            Feedback("烤架蓝图已放置，等待船员施工"); return true;
+            Feedback("设施蓝图已放置，等待船员施工"); return true;
         }
 
         public bool TryBeginGrill(Vector2Int coordinate)
         {
             if (!grills.TryGetValue(coordinate, out GrillCell cell) || cell.State != DeckState.Planned ||
-                (resources != null && !resources.TryReserve(cell, configuration.GrillCost))) return false;
+                (resources != null && !resources.TryReserve(cell, FacilityCost(cell.Kind)))) return false;
             cell.State = DeckState.Constructing; LayoutVersion++; Changed?.Invoke(); return true;
         }
 
@@ -323,15 +352,17 @@ namespace RaftGame.Building
         {
             if (!grills.TryGetValue(coordinate, out GrillCell cell) || cell.State != DeckState.Constructing ||
                 (IsCellOccupied != null && IsCellOccupied(coordinate))) return false;
-            GameObject visual = Instantiate(configuration.GrillPrefab, raftRoot);
+            GameObject visual = Instantiate(FacilityPrefab(cell.Kind, false), raftRoot);
             if (resources != null && !resources.Commit(cell)) { Destroy(visual); return false; }
             visual.transform.position = CellToWorld(coordinate);
             visual.transform.rotation = raftRoot.rotation * Quaternion.Euler(0, cell.Rotation * 90, 0);
             Destroy(cell.Visual); cell.Visual = visual; cell.View = visual.GetComponent<GrillView>();
+            cell.WaterView = visual.GetComponent<PurifierView>();
             cell.State = DeckState.Complete; cell.ConstructionProgress = 1f;
             if (cell.View != null) cell.View.Present(false, 0f);
             cells[coordinate].IsBlocked = true;
-            GrillCount++; LayoutVersion++; Feedback("烤架建好，船员会自动储备熟鱼"); return true;
+            if (cell.Kind == FacilityKind.Grill) GrillCount++; else PurifierCount++;
+            LayoutVersion++; Feedback(cell.Kind == FacilityKind.Grill ? "烤架建好，船员会自动储备熟鱼" : "净水器建好，船员会自动储备淡水"); return true;
         }
 
         public bool TrySuspendGrill(Vector2Int coordinate)
@@ -384,6 +415,37 @@ namespace RaftGame.Building
             tint.SetColor("_Color", color);
             foreach (Renderer renderer in target.GetComponentsInChildren<Renderer>()) renderer.SetPropertyBlock(tint);
         }
+        public void RestoreLayout(IReadOnlyList<DeckSave> decks, IReadOnlyList<FacilitySave> facilities)
+        {
+            SetTool(BuildTool.None);
+            foreach (var cell in cells.Values) { cell.Visual.SetActive(false); Destroy(cell.Visual); }
+            foreach (var cell in grills.Values) { cell.Visual.SetActive(false); Destroy(cell.Visual); }
+            cells.Clear(); grills.Clear(); CompletedCount = 0; GrillCount = 0; PurifierCount = 0;
+            foreach (DeckSave entry in decks)
+            {
+                var visual = Instantiate(entry.Complete ? configuration.DeckPrefab : configuration.BlueprintPrefab, raftRoot);
+                visual.transform.position = CellToWorld(entry.Coordinate);
+                if (entry.Complete) { visual.GetComponent<DeckTile>().Coordinate = entry.Coordinate; CompletedCount++; }
+                else Tint(visual, configuration.PlannedColor);
+                cells.Add(entry.Coordinate, new DeckCell(entry.Coordinate, entry.Complete ? DeckState.Complete : DeckState.Planned, visual) { ConstructionProgress = entry.Progress });
+            }
+            foreach (FacilitySave entry in facilities)
+            {
+                var visual = Instantiate(FacilityPrefab(entry.Kind, !entry.Complete), raftRoot);
+                visual.transform.position = CellToWorld(entry.Coordinate); visual.transform.rotation = raftRoot.rotation * Quaternion.Euler(0, entry.Rotation * 90, 0);
+                var cell = new GrillCell(entry.Coordinate, entry.Rotation, visual, entry.Kind) { State = entry.Complete ? DeckState.Complete : DeckState.Planned, ConstructionProgress = entry.Progress };
+                if (entry.Complete)
+                {
+                    cell.View = visual.GetComponent<GrillView>(); cell.WaterView = visual.GetComponent<PurifierView>();
+                    cell.View?.Present(false, 0); cell.WaterView?.Present(false, 0);
+                    cells[entry.Coordinate].IsBlocked = true;
+                    if (entry.Kind == FacilityKind.Grill) GrillCount++; else PurifierCount++;
+                }
+                else Tint(visual, configuration.PlannedColor);
+                grills.Add(entry.Coordinate, cell);
+            }
+            LayoutVersion++; Feedback("存档中的木筏已恢复");
+        }
 
         public void Shutdown()
         {
@@ -391,6 +453,7 @@ namespace RaftGame.Building
             if (resources != null) foreach (GrillCell cell in grills.Values) resources.Release(cell);
             if (preview != null) Destroy(preview);
             if (grillPreview != null) Destroy(grillPreview);
+            if (purifierPreview != null) Destroy(purifierPreview);
             IsCellOccupied = null;
             IsInitialized = false;
             Changed = null;

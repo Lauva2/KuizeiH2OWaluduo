@@ -10,6 +10,12 @@ namespace RaftGame.Needs
         internal object Owner;
         internal bool Ended;
     }
+    public sealed class DrinkSession
+    {
+        public float Progress { get; internal set; }
+        internal object Owner;
+        internal bool Ended;
+    }
 
     /// <summary>Gentle hunger: reduced work speed only, with no health or death state.</summary>
     public sealed class NeedsManager : MonoBehaviour
@@ -17,13 +23,17 @@ namespace RaftGame.Needs
         private NeedsConfig configuration;
         private ResourceManager resources;
         private MealSession active;
+        private DrinkSession drink;
+        private int previousHydration = -1;
         private int previousSatiety = -1;
         private int previousEfficiency = -1;
         public bool IsInitialized { get; private set; }
         public float Satiety { get; private set; }
+        public float Hydration { get; private set; }
         public float Efficiency => !IsInitialized ? 1f : Mathf.Lerp(Mathf.Clamp(configuration.MinimumEfficiency, 0.1f, 1f), 1f,
-            Mathf.Clamp01(Satiety / Mathf.Max(1f, configuration.HungryBelow)));
-        public bool ShouldEat => IsInitialized && active == null && Satiety <= configuration.EatBelow && resources.GetAvailable(ResourceType.CookedFish) > 0;
+            Mathf.Min(Mathf.Clamp01(Satiety / Mathf.Max(1f, configuration.HungryBelow)), Mathf.Clamp01(Hydration / Mathf.Max(1f, configuration.ThirstyBelow))));
+        public bool ShouldEat => IsInitialized && active == null && drink == null && Satiety <= configuration.EatBelow && resources.GetAvailable(ResourceType.CookedFish) > 0;
+        public bool ShouldDrink => IsInitialized && active == null && drink == null && Hydration <= configuration.DrinkBelow && resources.GetAvailable(ResourceType.Water) > 0;
         public int Version { get; private set; }
         public event Action Changed;
 
@@ -31,13 +41,45 @@ namespace RaftGame.Needs
         {
             if (IsInitialized) return true;
             if (config == null || inventory == null || !inventory.IsInitialized) return false;
-            configuration = config; resources = inventory; IsInitialized = true; SetSatiety(config.StartingSatiety); return true;
+            configuration = config; resources = inventory; IsInitialized = true; Hydration = Mathf.Clamp(config.StartingHydration, 0, 100); SetSatiety(config.StartingSatiety); return true;
         }
 
         public void Tick(float deltaTime)
         {
             if (!IsInitialized || deltaTime <= 0f) return;
             SetSatiety(Satiety - Mathf.Max(0f, configuration.DrainPerSecond) * deltaTime);
+            SetHydration(Hydration - Mathf.Max(0f, configuration.ThirstDrainPerSecond) * deltaTime);
+        }
+
+        public void SetHydration(float value)
+        {
+            if (!IsInitialized || float.IsNaN(value)) return;
+            Hydration = Mathf.Clamp(value, 0, 100);
+            int level = Mathf.FloorToInt(Hydration), efficiency = Mathf.RoundToInt(Efficiency * 100);
+            if (level == previousHydration && efficiency == previousEfficiency) return;
+            previousHydration = level; previousEfficiency = efficiency; Notify();
+        }
+        public DrinkSession TryBeginDrink(object owner)
+        {
+            if (owner == null || !ShouldDrink) return null;
+            var session = new DrinkSession { Owner = owner }; drink = session;
+            if (!resources.TryReserve(session, new ResourceCost(0, 0, 0, 0, 1))) { drink = null; return null; }
+            Notify(); return session;
+        }
+        private bool ValidDrink(DrinkSession session, object owner) => IsInitialized && session != null && ReferenceEquals(session, drink) && !session.Ended && ReferenceEquals(session.Owner, owner);
+        public bool AdvanceDrink(DrinkSession session, object owner, float deltaTime)
+        {
+            if (!ValidDrink(session, owner)) return false;
+            session.Progress = Mathf.Clamp01(session.Progress + Mathf.Max(0, deltaTime) / Mathf.Max(0.1f, configuration.DrinkingDuration));
+            if (session.Progress < 1) return true;
+            session.Ended = true; drink = null;
+            if (!resources.Commit(session)) { Notify(); return false; }
+            SetHydration(Hydration + Mathf.Max(1, configuration.DrinkRestore)); Notify(); return true;
+        }
+        public void CancelDrink(DrinkSession session, object owner)
+        {
+            if (!ValidDrink(session, owner)) return;
+            session.Ended = true; drink = null; resources.Release(session); Notify();
         }
 
         public void SetSatiety(float value)
@@ -78,6 +120,7 @@ namespace RaftGame.Needs
         public void Shutdown()
         {
             if (active != null) Cancel(active, active.Owner);
+            if (drink != null) CancelDrink(drink, drink.Owner);
             IsInitialized = false; Changed = null;
         }
     }

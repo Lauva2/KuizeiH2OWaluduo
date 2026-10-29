@@ -1,0 +1,1 @@
+PASS: real Play mode, AA-loaded HUD, cooking/planning/low-satiety captures, 1600x900 and 1280x800, no truncated labels, satiety binding, cached target controls.

@@ -32,6 +32,7 @@ namespace RaftGame.Fishing
         private ResourceManager resources;
         private OceanManager ocean;
         private FishingSession active;
+        private LootManager loot;
         public bool IsInitialized { get; private set; }
         public bool AutomaticFishing { get; private set; }
         public int RodCount { get; private set; }
@@ -39,11 +40,12 @@ namespace RaftGame.Fishing
         public int Version { get; private set; }
         public event Action Changed;
 
-        public bool Initialize(FishingConfig config, BuildManager build, ResourceManager inventory, OceanManager sea)
+        public bool Initialize(FishingConfig config, BuildManager build, ResourceManager inventory, OceanManager sea, LootManager rewards = null)
         {
             if (IsInitialized) return true;
             if (config == null || build == null || !build.IsInitialized || inventory == null || !inventory.IsInitialized || sea == null || !sea.IsInitialized) return false;
             configuration = config; building = build; resources = inventory; ocean = sea;
+            loot = rewards;
             RodCount = Mathf.Clamp(config.StartingRods, 0, 1);
             AutomaticFishing = config.AutomaticByDefault;
             IsInitialized = true;
@@ -75,7 +77,8 @@ namespace RaftGame.Fishing
         }
 
         private bool CanFish() => IsInitialized && AutomaticFishing && AvailableRods > 0 &&
-            resources.GetTotal(ResourceType.Fish) <= int.MaxValue - Mathf.Max(1, configuration.FishPerCatch);
+            (resources.GetTotal(ResourceType.Fish) <= int.MaxValue - Mathf.Max(1, configuration.FishPerCatch) ||
+             (loot != null && (resources.GetTotal(ResourceType.Water) < int.MaxValue || resources.GetTotal(ResourceType.Wood) < int.MaxValue - 1 || resources.GetTotal(ResourceType.Scrap) < int.MaxValue)));
 
         public bool TryFindSpot(Dictionary<Vector2Int, int> distances, out FishingSpot spot)
         {
@@ -121,7 +124,7 @@ namespace RaftGame.Fishing
             // Retire the session before inventory callbacks; a catch can only credit once.
             session.Ended = true;
             active = null;
-            caught = resources.Add(ResourceType.Fish, Mathf.Max(1, configuration.FishPerCatch));
+            caught = loot != null ? loot.AwardCatch(configuration.FishPerCatch) : resources.Add(ResourceType.Fish, Mathf.Max(1, configuration.FishPerCatch));
             Notify();
             return true;
         }
@@ -146,6 +149,11 @@ namespace RaftGame.Fishing
         }
 
         private void Notify() { Version++; Changed?.Invoke(); }
+        public void RestoreEquipment(int rods, bool automatic)
+        {
+            if (active != null) Cancel(active, active.Owner);
+            RodCount = rods; AutomaticFishing = automatic; Notify();
+        }
         public void Shutdown()
         {
             if (active != null) { active.Ended = true; active = null; }

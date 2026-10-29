@@ -39,13 +39,14 @@ namespace RaftGame.Resources
                 case ResourceType.Scrap: return cost.Scrap;
                 case ResourceType.Fish: return cost.Fish;
                 case ResourceType.CookedFish: return cost.CookedFish;
+                case ResourceType.Water: return cost.Water;
                 default: throw new ArgumentOutOfRangeException(nameof(type));
             }
         }
 
         public bool CanAfford(ResourceCost cost) => IsInitialized && cost.IsValid &&
             cost.Wood <= total.Wood - reserved.Wood && cost.Scrap <= total.Scrap - reserved.Scrap &&
-            cost.Fish <= total.Fish - reserved.Fish && cost.CookedFish <= total.CookedFish - reserved.CookedFish;
+            cost.Fish <= total.Fish - reserved.Fish && cost.CookedFish <= total.CookedFish - reserved.CookedFish && cost.Water <= total.Water - reserved.Water;
 
         public bool CanAffordAfterRelease(object owner, ResourceCost cost)
         {
@@ -53,7 +54,7 @@ namespace RaftGame.Resources
             ResourceCost held = default;
             if (owner != null) reservations.TryGetValue(owner, out held);
             return cost.Wood <= total.Wood - reserved.Wood + held.Wood && cost.Scrap <= total.Scrap - reserved.Scrap + held.Scrap &&
-                cost.Fish <= total.Fish - reserved.Fish + held.Fish && cost.CookedFish <= total.CookedFish - reserved.CookedFish + held.CookedFish;
+                cost.Fish <= total.Fish - reserved.Fish + held.Fish && cost.CookedFish <= total.CookedFish - reserved.CookedFish + held.CookedFish && cost.Water <= total.Water - reserved.Water + held.Water;
         }
 
         public bool Add(ResourceType type, int amount)
@@ -64,7 +65,8 @@ namespace RaftGame.Resources
             if (type == ResourceType.Wood) total.Wood += amount;
             else if (type == ResourceType.Scrap) total.Scrap += amount;
             else if (type == ResourceType.Fish) total.Fish += amount;
-            else total.CookedFish += amount;
+            else if (type == ResourceType.CookedFish) total.CookedFish += amount;
+            else total.Water += amount;
             Notify();
             return true;
         }
@@ -77,8 +79,17 @@ namespace RaftGame.Resources
             reserved.Scrap += cost.Scrap;
             reserved.Fish += cost.Fish;
             reserved.CookedFish += cost.CookedFish;
+            reserved.Water += cost.Water;
             Notify();
             return true;
+        }
+
+        public bool TryGrant(ResourceCost output)
+        {
+            if (!IsInitialized || !output.IsValid || (long)total.Wood + output.Wood > int.MaxValue || (long)total.Scrap + output.Scrap > int.MaxValue ||
+                (long)total.Fish + output.Fish > int.MaxValue || (long)total.CookedFish + output.CookedFish > int.MaxValue || (long)total.Water + output.Water > int.MaxValue) return false;
+            total = new ResourceCost(total.Wood + output.Wood, total.Scrap + output.Scrap, total.Fish + output.Fish, total.CookedFish + output.CookedFish, total.Water + output.Water);
+            Notify(); return true;
         }
 
         public bool Commit(object owner) => TryConvert(owner, default);
@@ -91,13 +102,15 @@ namespace RaftGame.Resources
             long scrap = (long)total.Scrap - cost.Scrap + output.Scrap;
             long fish = (long)total.Fish - cost.Fish + output.Fish;
             long cooked = (long)total.CookedFish - cost.CookedFish + output.CookedFish;
-            if (wood > int.MaxValue || scrap > int.MaxValue || fish > int.MaxValue || cooked > int.MaxValue) return false;
+            long water = (long)total.Water - cost.Water + output.Water;
+            if (wood > int.MaxValue || scrap > int.MaxValue || fish > int.MaxValue || cooked > int.MaxValue || water > int.MaxValue) return false;
             reservations.Remove(owner);
-            total = new ResourceCost((int)wood, (int)scrap, (int)fish, (int)cooked);
+            total = new ResourceCost((int)wood, (int)scrap, (int)fish, (int)cooked, (int)water);
             reserved.Wood -= cost.Wood;
             reserved.Scrap -= cost.Scrap;
             reserved.Fish -= cost.Fish;
             reserved.CookedFish -= cost.CookedFish;
+            reserved.Water -= cost.Water;
             Notify();
             return true;
         }
@@ -110,10 +123,17 @@ namespace RaftGame.Resources
             reserved.Scrap -= cost.Scrap;
             reserved.Fish -= cost.Fish;
             reserved.CookedFish -= cost.CookedFish;
+            reserved.Water -= cost.Water;
             Notify();
             return true;
         }
 
+        public ResourceCost CaptureInventory() => total;
+        public void RestoreInventory(ResourceCost inventory)
+        {
+            if (!inventory.IsValid) throw new ArgumentException("Invalid saved inventory.");
+            reservations.Clear(); reserved = default; total = inventory; Notify();
+        }
         private void Notify() { Version++; Changed?.Invoke(); }
         public void Shutdown()
         {

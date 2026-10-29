@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace RaftGame.Resources
 {
-    public enum ResourceType { Wood, Scrap, Fish, CookedFish }
+    public enum ResourceType { Wood, Scrap, Fish, CookedFish, Water }
 
     [Serializable]
     public struct ResourceCost
@@ -12,8 +12,9 @@ namespace RaftGame.Resources
         [Min(0)] public int Scrap;
         [Min(0)] public int Fish;
         [Min(0)] public int CookedFish;
-        public ResourceCost(int wood, int scrap, int fish = 0, int cookedFish = 0)
-        { Wood = wood; Scrap = scrap; Fish = fish; CookedFish = cookedFish; }
-        public bool IsValid => Wood >= 0 && Scrap >= 0 && Fish >= 0 && CookedFish >= 0;
+        [Min(0)] public int Water;
+        public ResourceCost(int wood, int scrap, int fish = 0, int cookedFish = 0, int water = 0)
+        { Wood = wood; Scrap = scrap; Fish = fish; CookedFish = cookedFish; Water = water; }
+        public bool IsValid => Wood >= 0 && Scrap >= 0 && Fish >= 0 && CookedFish >= 0 && Water >= 0;
     }
 }
