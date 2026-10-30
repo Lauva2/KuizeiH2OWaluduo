@@ -4,130 +4,74 @@ using UnityEngine;
 
 namespace RaftGame.Resources
 {
-    /// <summary>Total = available + reserved. Reservations belong to blueprint objects, not coordinates.</summary>
+    /// <summary>Total = available + reserved. Every recipe and output uses the same checked transaction path.</summary>
     public sealed class ResourceManager : MonoBehaviour
     {
+        public const int TypeCount = (int)ResourceType.BakedPotato + 1;
         private readonly Dictionary<object, ResourceCost> reservations = new Dictionary<object, ResourceCost>();
-        private ResourceCost total;
-        private ResourceCost reserved;
+        private ResourceCost total, reserved;
         public bool IsInitialized { get; private set; }
         public int Version { get; private set; }
         public int ReservationCount => reservations.Count;
         public event Action Changed;
-
         public bool Initialize(ResourceConfig config)
         {
             if (IsInitialized) return true;
             if (config == null || !config.StartingInventory.IsValid) return false;
-            total = config.StartingInventory;
-            reserved = default;
-            reservations.Clear();
-            IsInitialized = true;
-            Notify();
-            return true;
+            total = config.StartingInventory; reserved = default; reservations.Clear(); IsInitialized = true; Notify(); return true;
         }
-
-        public int GetTotal(ResourceType type) => Value(total, type);
-        public int GetReserved(ResourceType type) => Value(reserved, type);
+        public int GetTotal(ResourceType type) => total.Get(type);
+        public int GetReserved(ResourceType type) => reserved.Get(type);
         public int GetAvailable(ResourceType type) => GetTotal(type) - GetReserved(type);
-
-        private static int Value(ResourceCost cost, ResourceType type)
-        {
-            switch (type)
-            {
-                case ResourceType.Wood: return cost.Wood;
-                case ResourceType.Scrap: return cost.Scrap;
-                case ResourceType.Fish: return cost.Fish;
-                case ResourceType.CookedFish: return cost.CookedFish;
-                case ResourceType.Water: return cost.Water;
-                default: throw new ArgumentOutOfRangeException(nameof(type));
-            }
-        }
-
-        public bool CanAfford(ResourceCost cost) => IsInitialized && cost.IsValid &&
-            cost.Wood <= total.Wood - reserved.Wood && cost.Scrap <= total.Scrap - reserved.Scrap &&
-            cost.Fish <= total.Fish - reserved.Fish && cost.CookedFish <= total.CookedFish - reserved.CookedFish && cost.Water <= total.Water - reserved.Water;
-
+        public bool CanAfford(ResourceCost cost) => CanAffordAfterRelease(null, cost);
         public bool CanAffordAfterRelease(object owner, ResourceCost cost)
         {
             if (!IsInitialized || !cost.IsValid) return false;
-            ResourceCost held = default;
-            if (owner != null) reservations.TryGetValue(owner, out held);
-            return cost.Wood <= total.Wood - reserved.Wood + held.Wood && cost.Scrap <= total.Scrap - reserved.Scrap + held.Scrap &&
-                cost.Fish <= total.Fish - reserved.Fish + held.Fish && cost.CookedFish <= total.CookedFish - reserved.CookedFish + held.CookedFish && cost.Water <= total.Water - reserved.Water + held.Water;
-        }
-
-        public bool Add(ResourceType type, int amount)
-        {
-            if (!IsInitialized || amount <= 0) return false;
-            int current = GetTotal(type);
-            if (current > int.MaxValue - amount) return false;
-            if (type == ResourceType.Wood) total.Wood += amount;
-            else if (type == ResourceType.Scrap) total.Scrap += amount;
-            else if (type == ResourceType.Fish) total.Fish += amount;
-            else if (type == ResourceType.CookedFish) total.CookedFish += amount;
-            else total.Water += amount;
-            Notify();
+            ResourceCost held = default; if (owner != null) reservations.TryGetValue(owner, out held);
+            for (int index = 0; index < TypeCount; index++)
+            { var type = (ResourceType)index; if ((long)cost.Get(type) > (long)GetAvailable(type) + held.Get(type)) return false; }
             return true;
         }
-
+        public bool Add(ResourceType type, int amount) => amount > 0 && TryGrant(ResourceCost.Single(type, amount));
         public bool TryReserve(object owner, ResourceCost cost)
         {
             if (owner == null || reservations.ContainsKey(owner) || !CanAfford(cost)) return false;
-            reservations.Add(owner, cost);
-            reserved.Wood += cost.Wood;
-            reserved.Scrap += cost.Scrap;
-            reserved.Fish += cost.Fish;
-            reserved.CookedFish += cost.CookedFish;
-            reserved.Water += cost.Water;
-            Notify();
+            reservations.Add(owner, cost); AdjustReserved(cost, 1); Notify(); return true;
+        }
+        public bool CanGrant(ResourceCost output)
+        {
+            if (!IsInitialized || !output.IsValid) return false;
+            for (int index = 0; index < TypeCount; index++)
+            { var type = (ResourceType)index; if ((long)GetTotal(type) + output.Get(type) > int.MaxValue) return false; }
             return true;
         }
-
-        public bool TryGrant(ResourceCost output)
+        public bool TryGrant(ResourceCost output) => TryGrant(output, null);
+        internal bool TryGrant(ResourceCost output, Action commit)
         {
-            if (!IsInitialized || !output.IsValid || (long)total.Wood + output.Wood > int.MaxValue || (long)total.Scrap + output.Scrap > int.MaxValue ||
-                (long)total.Fish + output.Fish > int.MaxValue || (long)total.CookedFish + output.CookedFish > int.MaxValue || (long)total.Water + output.Water > int.MaxValue) return false;
-            total = new ResourceCost(total.Wood + output.Wood, total.Scrap + output.Scrap, total.Fish + output.Fish, total.CookedFish + output.CookedFish, total.Water + output.Water);
-            Notify(); return true;
+            if (!CanGrant(output)) return false;
+            for (int index = 0; index < TypeCount; index++) { var type = (ResourceType)index; total.Set(type, total.Get(type) + output.Get(type)); }
+            commit?.Invoke(); Notify(); return true;
         }
-
         public bool Commit(object owner) => TryConvert(owner, default);
-
-        // Validate all outputs before consuming any inputs; one event observes the entire transaction.
-        public bool TryConvert(object owner, ResourceCost output)
+        public bool TryConvert(object owner, ResourceCost output) => TryConvert(owner, output, null);
+        internal bool TryConvert(object owner, ResourceCost output, Action commit)
         {
-            if (!IsInitialized || !output.IsValid || owner == null || !reservations.TryGetValue(owner, out ResourceCost cost)) return false;
-            long wood = (long)total.Wood - cost.Wood + output.Wood;
-            long scrap = (long)total.Scrap - cost.Scrap + output.Scrap;
-            long fish = (long)total.Fish - cost.Fish + output.Fish;
-            long cooked = (long)total.CookedFish - cost.CookedFish + output.CookedFish;
-            long water = (long)total.Water - cost.Water + output.Water;
-            if (wood > int.MaxValue || scrap > int.MaxValue || fish > int.MaxValue || cooked > int.MaxValue || water > int.MaxValue) return false;
-            reservations.Remove(owner);
-            total = new ResourceCost((int)wood, (int)scrap, (int)fish, (int)cooked, (int)water);
-            reserved.Wood -= cost.Wood;
-            reserved.Scrap -= cost.Scrap;
-            reserved.Fish -= cost.Fish;
-            reserved.CookedFish -= cost.CookedFish;
-            reserved.Water -= cost.Water;
-            Notify();
-            return true;
+            if (!IsInitialized || !output.IsValid || owner == null || !reservations.TryGetValue(owner, out var cost)) return false;
+            var next = new ResourceCost();
+            for (int index = 0; index < TypeCount; index++)
+            {
+                var type = (ResourceType)index; long value = (long)total.Get(type) - cost.Get(type) + output.Get(type);
+                if (value < 0 || value > int.MaxValue) return false; next.Set(type, (int)value);
+            }
+            reservations.Remove(owner); total = next; AdjustReserved(cost, -1); commit?.Invoke(); Notify(); return true;
         }
-
         public bool Release(object owner)
         {
-            if (owner == null || !reservations.TryGetValue(owner, out ResourceCost cost)) return false;
-            reservations.Remove(owner);
-            reserved.Wood -= cost.Wood;
-            reserved.Scrap -= cost.Scrap;
-            reserved.Fish -= cost.Fish;
-            reserved.CookedFish -= cost.CookedFish;
-            reserved.Water -= cost.Water;
-            Notify();
-            return true;
+            if (owner == null || !reservations.TryGetValue(owner, out var cost)) return false;
+            reservations.Remove(owner); AdjustReserved(cost, -1); Notify(); return true;
         }
-
+        private void AdjustReserved(ResourceCost cost, int sign)
+        { for (int index = 0; index < TypeCount; index++) { var type = (ResourceType)index; reserved.Set(type, reserved.Get(type) + cost.Get(type) * sign); } }
         public ResourceCost CaptureInventory() => total;
         public void RestoreInventory(ResourceCost inventory)
         {
@@ -135,12 +79,6 @@ namespace RaftGame.Resources
             reservations.Clear(); reserved = default; total = inventory; Notify();
         }
         private void Notify() { Version++; Changed?.Invoke(); }
-        public void Shutdown()
-        {
-            reservations.Clear();
-            reserved = default;
-            IsInitialized = false;
-            Changed = null;
-        }
+        public void Shutdown() { reservations.Clear(); reserved = default; IsInitialized = false; Changed = null; }
     }
 }

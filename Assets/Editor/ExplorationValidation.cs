@@ -84,7 +84,7 @@ namespace RaftGame.Editor
                 var pointer = new PointerEventData(EventSystem.current) { position = new Vector2(Screen.width * .5f, Screen.height * .5f) };
                 var hits = new List<RaycastResult>(); EventSystem.current.RaycastAll(pointer, hits);
                 Require(hits.Count > 0 && hits[0].gameObject.transform.IsChildOf(view.CatalogOverlay.transform), "Catalog intercepts world clicks");
-                view.LivingCategoryButton.onClick.Invoke(); Require(view.CatalogEmptyText.gameObject.activeInHierarchy && !view.GrillButton.gameObject.activeSelf, "Empty category remains clear without locked recipe cards");
+                view.LivingCategoryButton.onClick.Invoke(); Require(!view.CatalogEmptyText.gameObject.activeInHierarchy && view.BedButton.gameObject.activeInHierarchy && !view.GrillButton.gameObject.activeSelf, "Living category contains the starter bed without locked production cards");
                 view.BasicsCategoryButton.onClick.Invoke(); view.DeckRecipeButton.onClick.Invoke(); Require(!build.CatalogOpen && build.Tool == BuildTool.DeckBlueprint, "Recipe selection closes catalog and enters placement");
                 build.SetTool(BuildTool.None);
                 TestCatches();

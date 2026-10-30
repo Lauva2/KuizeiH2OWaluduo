@@ -12,6 +12,8 @@ namespace RaftGame.UI
         public const string Address = nameof(UICommon_Build);
         public Button BuildButton;
         public Button CancelButton;
+        public Button CrewButton;
+        public Text CrewButtonText;
         public Text CompletedText;
         public Text BlueprintText;
         public Text StatusText;
@@ -24,6 +26,19 @@ namespace RaftGame.UI
         public Button FishingButton;
         public Text FishingButtonText;
         public Button GrillButton;
+        public Button NetButton;
+        public Text NetRecipeCost, NetScrapCost;
+        public Button BedButton;
+        public Button PlanterButton;
+        public Text PlanterRecipeCost, PlanterScrapCost, PotatoText, BakedPotatoText, CookedFoodText, CatalogCloseHint;
+        public GameObject FarmingCatalogHint;
+        public Button PlantButton, RugButton, DecorLampButton;
+        public Text PlantRecipeCost, PlantScrapCost, RugRecipeCost, RugScrapCost, DecorLampRecipeCost, DecorLampScrapCost;
+        public Button ComfortButton;
+        public Text ComfortText, ComfortDetailText;
+        public Text BedRecipeCost, BedScrapCost;
+        public Text EnergyText;
+        public RectTransform EnergyFill;
         public Text GrillText;
         public Text CookedFishText;
         public Text NeedsText;

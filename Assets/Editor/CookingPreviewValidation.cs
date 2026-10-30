@@ -55,6 +55,8 @@ namespace RaftGame.Editor
                 var build = UnityEngine.Object.FindObjectOfType<BuildManager>();
                 var crew = UnityEngine.Object.FindObjectOfType<CrewManager>();
                 var inventory = UnityEngine.Object.FindObjectOfType<ResourceManager>();
+                // Keep this legacy scenario focused on the fish chain; FarmingValidation covers both food recipes.
+                var fishOnlyStock = inventory.CaptureInventory(); fishOnlyStock.Potato = 0; fishOnlyStock.BakedPotato = 0; inventory.RestoreInventory(fishOnlyStock);
                 var fishing = UnityEngine.Object.FindObjectOfType<FishingManager>();
                 var production = UnityEngine.Object.FindObjectOfType<ProductionManager>();
                 var needs = UnityEngine.Object.FindObjectOfType<NeedsManager>();

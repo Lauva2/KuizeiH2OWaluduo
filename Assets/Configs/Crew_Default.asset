@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: Crew_Default
   m_EditorClassIdentifier: 
   CrewPrefab: {fileID: 4688116344485561147, guid: 1d32cb9b928b8f74184385a62b7c0f04, type: 3}
+  FirstName: "\u963F\u822A"
+  RecruitName: "\u5C0F\u6F9C"
   SpawnCell: {x: 0, y: 0}
   WalkSpeed: 1.8
   ConstructionDuration: 4.5

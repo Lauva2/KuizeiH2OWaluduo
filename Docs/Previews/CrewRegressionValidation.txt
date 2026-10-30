@@ -1,0 +1,12 @@
+PASS: Unity 2022.3.62f2, isolated FacilityValidationProject, actual Play mode with built Addressables.
+
+CrewRecruitmentValidation: 1901 checks, exit 0; final source compiles without C# errors.
+ProgressionValidation: 923 assertions, exit 0.
+CollectionNetValidation: 300 checks, exit 0.
+FacilityValidation: 303 checks, exit 0.
+ExplorationValidation: 1530 assertions, exit 0.
+CrewPreviewValidation: CREW_VALIDATION_OK, exit 0.
+
+The final crew validation additionally covers HUD notices, live cell-coordinate refresh, parallel purifiers, preference controls, and final screenshots.
+All 99 delivered C# files match the tested copy by SHA-256 and script GUID. Eight delivered scene/config/prefab/group assets match the tested copy by SHA-256; existing GUIDs were preserved.
+Registry package configuration and the original open editor were left in place. Generated Windows Addressables build output remains in the validation copy; the source project's Asset Database Play mode uses the delivered prefabs and UI group.

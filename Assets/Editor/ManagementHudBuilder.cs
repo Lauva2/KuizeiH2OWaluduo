@@ -46,7 +46,7 @@ namespace RaftGame.Editor
                 RectTransform supplies = Card("Resource Card", header, new Vector2(0, 1), new Vector2(272, 0), new Vector2(800, 112));
                 RectTransform tooltip = Card("Resource Tooltip", root.transform, new Vector2(0, 1), Vector2.zero, new Vector2(302, 104));
                 Text tooltipText = Label("", tooltip, new Vector2(16, -10), new Vector2(272, 84), 14, Ink);
-                view.ResourceTiles = new ResourceTile[5];
+                view.ResourceTiles = new ResourceTile[7];
                 Text[] counts = new Text[5];
                 for (int index = 0; index < 5; index++)
                 {
@@ -78,19 +78,23 @@ namespace RaftGame.Editor
                 view.CompletedText = Label("已建甲板  9", life, new Vector2(22, -16), new Vector2(128, 24), 16, Ink, true);
                 view.BlueprintText = Label("待施工  0", life, new Vector2(156, -16), new Vector2(112, 24), 15, Muted);
                 view.GrillText = Label("烤架 0 · 净水 0", life, new Vector2(282, -16), new Vector2(164, 24), 15, Muted);
-                view.NeedsText = Label("饱腹 70%     水分 80%     效率 100%", life, new Vector2(22, -51), new Vector2(418, 22), 15, Ink);
-                view.SatietyFill = Fill(Block("Satiety Track", life, new Vector2(22, -86), new Vector2(200, 6), new Color(0.84f, 0.86f, 0.78f)).transform, "Satiety Fill", Sea);
-                view.HydrationFill = Fill(Block("Hydration Track", life, new Vector2(240, -86), new Vector2(200, 6), new Color(0.84f, 0.86f, 0.78f)).transform, "Hydration Fill", new Color(0.22f, 0.56f, 0.67f));
+                view.NeedsText = Label("饱腹 70%     水分 80%     效率 100%", life, new Vector2(22, -46), new Vector2(418, 22), 15, Ink);
+                view.EnergyText = Label("精力 85% · C 查看休息状态", life, new Vector2(22, -73), new Vector2(418, 18), 12, Muted);
+                view.SatietyFill = Fill(Block("Satiety Track", life, new Vector2(22, -99), new Vector2(124, 4), new Color(0.84f, 0.86f, 0.78f)).transform, "Satiety Fill", Sea);
+                view.HydrationFill = Fill(Block("Hydration Track", life, new Vector2(162, -99), new Vector2(124, 4), new Color(0.84f, 0.86f, 0.78f)).transform, "Hydration Fill", new Color(0.22f, 0.56f, 0.67f));
+                view.EnergyFill = Fill(Block("Energy Track", life, new Vector2(302, -99), new Vector2(138, 4), new Color(0.84f, 0.86f, 0.78f)).transform, "Energy Fill", new Color(.59f, .48f, .70f));
 
                 RectTransform toolbar = Card("Construction Toolbar", root.transform, new Vector2(0.5f, 0), new Vector2(0, 24), new Vector2(900, 136));
                 view.ModeText = Label("自由规划", toolbar, new Vector2(22, -12), new Vector2(175, 26), 18, Ink, true);
                 view.CostText = Label("甲板：木材 4 + 废料 1", toolbar, new Vector2(204, -15), new Vector2(280, 21), 14, Muted);
                 view.CrewText = Label("船员：待命", toolbar, new Vector2(540, -15), new Vector2(336, 21), 13, Ink);
                 view.CrewText.alignment = TextAnchor.MiddleRight;
-                view.BuildButton = ToolButton("建造图册", "B", toolbar, 22, 276);
-                view.CancelButton = ToolButton("撤销蓝图", "X", toolbar, 312, 276);
-                view.FishingButton = ToolButton("空闲钓鱼 · 开", "F", toolbar, 602, 276);
+                view.BuildButton = ToolButton("建造图册", "B", toolbar, 22, 220);
+                view.CancelButton = ToolButton("撤销蓝图", "X", toolbar, 258, 190);
+                view.FishingButton = ToolButton("空闲钓鱼 · 开", "F", toolbar, 464, 238);
                 view.FishingButtonText = view.FishingButton.GetComponentInChildren<Text>();
+                view.CrewButton = ToolButton("船员 1/2", "C", toolbar, 718, 160);
+                view.CrewButtonText = view.CrewButton.GetComponentInChildren<Text>();
                 Block("Toolbar separator", toolbar, new Vector2(22, -105), new Vector2(856, 1), new Color(0.85f, 0.85f, 0.78f));
                 view.StatusText = Label("点击漂浮物标记打捞 · 再次点击取消", toolbar, new Vector2(22, -109), new Vector2(856, 20), 14, Muted);
 
@@ -112,6 +116,25 @@ namespace RaftGame.Editor
                 view.CurrentArrow = Arrow(weather, new Vector2(84, -24), Sea);
                 Label("风向", weather, new Vector2(124, -10), new Vector2(50, 28), 14, Ink);
                 view.WindArrow = Arrow(weather, new Vector2(194, -24), new Color(.65f, .40f, .21f));
+                var comfort = Card("Camp Comfort", root.transform, new Vector2(0, 1), new Vector2(24, -218), new Vector2(236, 72));
+                view.ComfortButton = comfort.gameObject.AddComponent<Button>(); view.ComfortButton.targetGraphic = comfort.GetComponent<Image>();
+                view.ComfortText = Label("营地舒适 0", comfort, new Vector2(14, -10), new Vector2(208, 29), 20, Ink, true);
+                view.ComfortDetailText = Label("休息恢复 +0% · V 查看装饰", comfort, new Vector2(14, -43), new Vector2(208, 21), 12, Muted);
+                var crops = Card("Crop Stock", root.transform, new Vector2(0, 1), new Vector2(24, -306), new Vector2(236, 144));
+                Label("种薯与烤土豆", crops, new Vector2(14, -8), new Vector2(208, 23), 15, Ink, true);
+                for (int index = 0; index < 2; index++)
+                {
+                    var type = index == 0 ? ResourceType.Potato : ResourceType.BakedPotato;
+                    var tileRect = Rect(type.ToString(), crops, new Vector2(index * 118, -36), new Vector2(118, 68)); tileRect.gameObject.AddComponent<Image>().color = Color.clear;
+                    var tile = tileRect.gameObject.AddComponent<ResourceTile>(); tile.Resource = type; tile.TooltipPanel = tooltip; tile.TooltipText = tooltipText; view.ResourceTiles[index + 5] = tile;
+                    var icon = Rect("Icon", tileRect, new Vector2(14, -2), new Vector2(34, 34)).gameObject.AddComponent<ResourceIcon>(); icon.Resource = type; icon.raycastTarget = false;
+                    var count = Label("0", tileRect, new Vector2(57, -1), new Vector2(52, 34), 23, Ink, true); count.resizeTextForBestFit = true; count.resizeTextMinSize = 10; count.resizeTextMaxSize = 23;
+                    if (index == 0) view.PotatoText = count; else view.BakedPotatoText = count;
+                    var track = Block("Stock Track", tileRect, new Vector2(14, -41), new Vector2(92, 4), new Color(.84f, .86f, .78f));
+                    tile.AvailableFill = Fill(track.transform, "Available", Sea); tile.ReservedFill = Fill(track.transform, "Reserved", new Color(.79f, .55f, .26f));
+                    Label(index == 0 ? "土豆 · 可留种" : "烤土豆", tileRect, new Vector2(14, -49), new Vector2(96, 18), 11, Muted);
+                }
+                view.CookedFoodText = Label("熟食合计 0 / 目标 4", crops, new Vector2(14, -113), new Vector2(208, 23), 13, Ink);
                 var dayClock = Card("Day and Night", root.transform, new Vector2(1, 1), new Vector2(-24, -154), new Vector2(284, 68));
                 view.DayIcon = Rect("Sun and Moon", dayClock, new Vector2(10, -11), new Vector2(44, 44)).gameObject.AddComponent<DayPhaseIcon>(); view.DayIcon.raycastTarget = false;
                 view.DayClockText = Label("第 1 天 · 08:00", dayClock, new Vector2(64, -8), new Vector2(208, 28), 19, Ink, true);
@@ -172,30 +195,56 @@ namespace RaftGame.Editor
             view.BasicsCategoryButton = ActionButton("基础建造", window, new Vector2(24, -108), new Vector2(156, 48));
             view.ProductionCategoryButton = ActionButton("生产设施", window, new Vector2(24, -168), new Vector2(156, 48));
             view.LivingCategoryButton = ActionButton("生活设施", window, new Vector2(24, -228), new Vector2(156, 48));
-            Label("B / Esc 关闭", window, new Vector2(24, -360), new Vector2(156, 24), 13, Muted);
+            view.CatalogCloseHint = Label("B / Esc 关闭", window, new Vector2(24, -360), new Vector2(156, 24), 13, Muted);
             view.CatalogHeading = Label("基础建造 · 1 张图纸", window, new Vector2(212, -66), new Vector2(640, 25), 16, Ink, true);
             view.DeckRecipeButton = Recipe("木筏甲板", BuildTool.DeckBlueprint, "扩展营地\n连接更多空间", window, 212, out view.DeckRecipeCost, out view.DeckScrapCost);
-            view.GrillButton = Recipe("简易烤架", BuildTool.GrillBlueprint, "鲜鱼与木材\n烤出温暖一餐", window, 212, out view.GrillRecipeCost, out view.GrillScrapCost);
-            view.WaterButton = Recipe("海水净化器", BuildTool.PurifierBlueprint, "木材作燃料\n储备干净淡水", window, 516, out view.PurifierRecipeCost, out view.PurifierScrapCost);
+            view.GrillButton = Recipe("简易烤架", BuildTool.GrillBlueprint, "鲜鱼与木材\n烤出温暖一餐", window, 212, out view.GrillRecipeCost, out view.GrillScrapCost, 208);
+            view.WaterButton = Recipe("海水净化器", BuildTool.PurifierBlueprint, "木材作燃料\n储备干净淡水", window, 436, out view.PurifierRecipeCost, out view.PurifierScrapCost, 208);
+            view.NetButton = Recipe("漂流收集网", BuildTool.CollectionNetBlueprint, "海面自动拦截\n船员收取补给", window, 660, out view.NetRecipeCost, out view.NetScrapCost, 208);
+            view.BedButton = LivingRecipe("基础床铺", BuildTool.BedBlueprint, "疲倦时躺下休息", window, 212, -108, out view.BedRecipeCost, out view.BedScrapCost);
+            view.PlantButton = LivingRecipe("海岛盆栽", BuildTool.PlantBlueprint, "角落绿意，留出通道", window, 548, -108, out view.PlantRecipeCost, out view.PlantScrapCost);
+            view.RugButton = LivingRecipe("编织地毯", BuildTool.RugBlueprint, "柔软铺面，可自由行走", window, 212, -254, out view.RugRecipeCost, out view.RugScrapCost);
+            view.DecorLampButton = LivingRecipe("营地装饰灯", BuildTool.DecorLampBlueprint, "夜间点亮营地角落", window, 548, -254, out view.DecorLampRecipeCost, out view.DecorLampScrapCost);
+            view.PlanterButton = LivingRecipe("土豆种植箱", BuildTool.PlanterBlueprint, "播种、浇水、收获土豆", window, 212, -400, out view.PlanterRecipeCost, out view.PlanterScrapCost);
+            var growingHint = Card("Planting Hints", window, new Vector2(0, 1), new Vector2(548, -400), new Vector2(320, 132));
+            growingHint.GetComponent<Image>().color = new Color(.94f, .94f, .88f); view.FarmingCatalogHint = growingHint.gameObject;
+            Label("留一份种薯，种下一轮希望", growingHint, new Vector2(16, -10), new Vector2(288, 28), 17, Ink, true);
+            Label("土豆既是作物，也能用来播种。\n浇水会先给船员留出饮用水。\n有种植箱时，烹饪会保留一份种薯。", growingHint, new Vector2(16, -47), new Vector2(288, 78), 14, Muted);
             view.CatalogEmptyText = Label("尚无已解锁的生活设施图纸", window, new Vector2(212, -168), new Vector2(656, 70), 20, Muted);
             view.CatalogHint = Label("未知图纸藏在漂流补给箱中", window, new Vector2(24, -412), new Vector2(872, 24), 14, Muted);
             overlay.gameObject.SetActive(false);
         }
-        private static Button Recipe(string name, BuildTool tool, string description, Transform parent, float x, out Text cost, out Text scrapCost)
+        private static Button LivingRecipe(string name, BuildTool tool, string description, Transform parent, float x, float y, out Text cost, out Text scrapCost)
         {
-            var rect = Card(name, parent, new Vector2(0, 1), new Vector2(x, -108), new Vector2(284, 280));
+            var rect = Card(name, parent, new Vector2(0, 1), new Vector2(x, y), new Vector2(320, 132));
             rect.GetComponent<Image>().color = new Color(.91f, .92f, .85f);
             var button = rect.gameObject.AddComponent<Button>(); button.targetGraphic = rect.GetComponent<Image>();
-            Label(name, rect, new Vector2(20, -14), new Vector2(244, 34), 22, Ink, true);
-            var icon = Rect("Blueprint Illustration", rect, new Vector2(20, -66), new Vector2(110, 88)).gameObject.AddComponent<BlueprintIcon>(); icon.Tool = tool; icon.raycastTarget = false;
-            Label(description, rect, new Vector2(146, -75), new Vector2(122, 66), 14, Muted);
-            Label("建造用料", rect, new Vector2(20, -166), new Vector2(244, 20), 13, Muted);
+            Label(name, rect, new Vector2(16, -9), new Vector2(280, 29), 20, Ink, true);
+            var icon = Rect("Blueprint Illustration", rect, new Vector2(14, -48), new Vector2(66, 66)).gameObject.AddComponent<BlueprintIcon>(); icon.Tool = tool; icon.raycastTarget = false;
+            Label(description, rect, new Vector2(92, -43), new Vector2(214, 25), 14, Muted);
+            for (int index = 0; index < 2; index++)
+            { var resource = Rect("Cost Icon", rect, new Vector2(96 + index * 96, -77), new Vector2(22, 24)).gameObject.AddComponent<ResourceIcon>(); resource.Resource = index == 0 ? ResourceType.Wood : ResourceType.Scrap; resource.raycastTarget = false; }
+            cost = Label("0", rect, new Vector2(125, -77), new Vector2(56, 25), 19, Ink, true);
+            scrapCost = Label("0", rect, new Vector2(221, -77), new Vector2(56, 25), 19, Ink, true);
+            Label("选择建造 →", rect, new Vector2(204, -106), new Vector2(102, 21), 12, Sea);
+            return button;
+        }
+        private static Button Recipe(string name, BuildTool tool, string description, Transform parent, float x, out Text cost, out Text scrapCost, float width = 284)
+        {
+            var rect = Card(name, parent, new Vector2(0, 1), new Vector2(x, -108), new Vector2(width, 280));
+            rect.GetComponent<Image>().color = new Color(.91f, .92f, .85f);
+            var button = rect.gameObject.AddComponent<Button>(); button.targetGraphic = rect.GetComponent<Image>();
+            Label(name, rect, new Vector2(20, -14), new Vector2(width - 40, 34), width < 250 ? 21 : 22, Ink, true);
+            var icon = Rect("Blueprint Illustration", rect, new Vector2(20, -66), new Vector2(width < 250 ? 72 : 110, 88)).gameObject.AddComponent<BlueprintIcon>(); icon.Tool = tool; icon.raycastTarget = false;
+            float descriptionX = width < 250 ? 104 : 146;
+            Label(description, rect, new Vector2(descriptionX, -75), new Vector2(width - descriptionX - 16, 66), 14, Muted);
+            Label("建造用料", rect, new Vector2(20, -166), new Vector2(width - 40, 20), 13, Muted);
             foreach (int index in new[] { 0, 1 })
-            { var resource = Rect("Cost icon", rect, new Vector2(20 + index * 125, -194), new Vector2(24, 26)).gameObject.AddComponent<ResourceIcon>(); resource.Resource = index == 0 ? ResourceType.Wood : ResourceType.Scrap; resource.raycastTarget = false; }
-            cost = Label("4", rect, new Vector2(53, -194), new Vector2(60, 26), 20, Ink, true);
-            scrapCost = Label("1", rect, new Vector2(178, -194), new Vector2(60, 26), 20, Ink, true);
-            var footer = Block("Choose", rect, new Vector2(20, -239), new Vector2(244, 29), Sea);
-            var label = Label("选择建造  →", footer.transform, Vector2.zero, new Vector2(244, 29), 14, White); label.alignment = TextAnchor.MiddleCenter;
+            { var resource = Rect("Cost icon", rect, new Vector2(20 + index * (width - 40) / 2, -194), new Vector2(24, 26)).gameObject.AddComponent<ResourceIcon>(); resource.Resource = index == 0 ? ResourceType.Wood : ResourceType.Scrap; resource.raycastTarget = false; }
+            cost = Label("4", rect, new Vector2(53, -194), new Vector2((width - 40) / 2 - 33, 26), 20, Ink, true);
+            scrapCost = Label("1", rect, new Vector2(53 + (width - 40) / 2, -194), new Vector2((width - 40) / 2 - 33, 26), 20, Ink, true);
+            var footer = Block("Choose", rect, new Vector2(20, -239), new Vector2(width - 40, 29), Sea);
+            var label = Label("选择建造  →", footer.transform, Vector2.zero, new Vector2(width - 40, 29), 14, White); label.alignment = TextAnchor.MiddleCenter;
             return button;
         }
 

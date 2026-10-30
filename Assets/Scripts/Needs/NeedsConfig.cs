@@ -18,5 +18,9 @@ namespace RaftGame.Needs
         [Range(1, 100)] public float DrinkRestore = 40;
         [Min(0.1f)] public float DrinkingDuration = 2f;
         [Range(1, 100)] public float ThirstyBelow = 25;
+        [Range(0, 100)] public float StartingEnergy = 85;
+        [Min(0)] public float WorkEnergyDrain = .12f;
+        [Min(0)] public float IdleEnergyDrain = .02f;
+        [Range(1, 100)] public float TiredBelow = 25;
     }
 }

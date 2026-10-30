@@ -56,7 +56,7 @@ namespace RaftGame.Fishing
         public void ProcessInput()
         {
             if (!IsInitialized) return;
-            if (Input.GetKeyDown(KeyCode.F)) SetAutomaticFishing(!AutomaticFishing);
+            if (!building.WorldModalOpen && Input.GetKeyDown(KeyCode.F)) SetAutomaticFishing(!AutomaticFishing);
             if (active != null && !IsSpotValid(active.Spot)) Cancel(active, active.Owner);
         }
 

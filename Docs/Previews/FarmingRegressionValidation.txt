@@ -1,0 +1,61 @@
+Validated 2026-10-30 with Unity 2022.3.62f2 in isolated .validation/ComfortProject.
+
+FarmingSceneBuilder.InstallAndBuildContent completed with FARMING_SCENE_OK and exit 0.
+The following actual Play-mode validators loaded the built Addressables UI and exited 0:
+
+FarmingValidation: 493 checks.
+ComfortValidation: 318 checks.
+RestValidation: 1985 checks.
+CrewRecruitmentValidation: 1901 checks.
+ProgressionValidation: 925 assertions.
+FacilityValidation: 303 checks.
+CollectionNetValidation: 300 checks.
+ExplorationValidation: 1531 assertions.
+CookingPreviewValidation: 241 assertions.
+FishingPreviewValidation: FISHING_VALIDATION_OK.
+
+Coverage includes actual planter construction and costs, planting/watering/harvest,
+sixty-second passive growth, pause and speed, two-crew station ownership, drinking
+priority and irrigation interruption, reservation cancellation, atomic inventory and
+crop snapshots, seed protection, repeated-cycle controls, crop-preserving move and
+rotation, output overflow, parallel baking, shared cooked-food targets, and eating.
+Version-six save tests include mixed planter/grill/decoration JSON roundtrips,
+malformed crop rejection, and version-five migration without duplicate starter seeds.
+Existing validators cover older save migration, partial construction, recruitment,
+rest, comfort, production, drifting supplies, collection nets, and blueprint discovery.
+
+The mixed-facility tests exposed Unity JsonUtility materializing null embedded crop
+objects. Crop state now uses a value type with an explicit HasCrop flag. Final mixed
+roundtrips and old-system save regressions passed after this fix.
+Shutdown rendering guards were added for destroyed HUD views; the final farming
+Play run produced no game exception or C# compiler error.
+
+Regression fixtures were updated for the seven-resource HUD and five-card living
+catalog. The fish-only cooking scenario clears potato stock to retain its original
+fishing/cooking/eating purpose; FarmingValidation separately exercises baked potatoes.
+Blueprint discovery keeps the full sea-water purifier name and the B instruction
+while reporting the additional potato reward.
+
+Legacy runner limitation: SalvagePreviewValidation was attempted but failed its old
+initial-supply assertion (6-18 items). It still assumes the earlier dense-supply rules;
+the authored scene already used 3 starting supplies and a cap of 7 before this change.
+That runner was left unchanged and is not counted as passed. Current drift, manual
+salvage, crate rewards, collection ownership, cancellation, and inventory invariants
+passed in ExplorationValidation, CollectionNetValidation, and FarmingValidation.
+
+Delivery verification:
+- All 117 delivered C# files match the tested copy by SHA-256 and script GUID.
+- All 22 new/updated material, prefab, config, and scene assets match by SHA-256.
+- Existing asset GUIDs were preserved; new metadata was copied before its assets.
+- Source/README whitespace checks passed. The source package manifest was unchanged.
+- Addressables build output stays in the isolated copy; delivered UI prefabs use the
+  existing UI group and prefab-name address. No new UI panel was required.
+
+Reviewed 1600x900 and 1280x800 catalog, watering, growth, maturity, baking and meal
+captures. Screenshots use temporary test inventory/layouts. The authored scene starts
+with one sailor, eight wood, two scrap, one rod, two raw potatoes, no water and no free
+planter, grill, decorations or cooked food. Opening older saves does not grant potatoes.
+
+Some Unity starts emitted an Android USB target-scan helper exception before Play;
+the helper had already exited. The affected rest run subsequently passed and exited 0.
+No user editor was opened or closed for validation.

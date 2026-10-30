@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 64d5e4e573c54139a869b2bd93a71f81, type: 3}
   m_Name: Build_Default
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   TileSize: 2
   DeckHeight: 0.48
   MaximumCoordinate: 64
@@ -23,6 +23,8 @@ MonoBehaviour:
     Fish: 0
     CookedFish: 0
     Water: 0
+    Potato: 0
+    BakedPotato: 0
   GrillPrefab: {fileID: 4603507305570546047, guid: c2994614fcb7630459fb73c9a8de7b9b, type: 3}
   GrillBlueprintPrefab: {fileID: 4995232204428950995, guid: 921760ddf34f6ed4ea9ad7c246a83235, type: 3}
   GrillCost:
@@ -31,6 +33,8 @@ MonoBehaviour:
     Fish: 0
     CookedFish: 0
     Water: 0
+    Potato: 0
+    BakedPotato: 0
   PurifierPrefab: {fileID: 4503571756076457247, guid: 18b8b62ca025a9b45ac4553c52be2feb, type: 3}
   PurifierBlueprintPrefab: {fileID: 1583731705986810370, guid: 8885b5dab1fd0b5429fa31bc313d838b, type: 3}
   PurifierCost:
@@ -39,6 +43,68 @@ MonoBehaviour:
     Fish: 0
     CookedFish: 0
     Water: 0
+    Potato: 0
+    BakedPotato: 0
+  CollectionNetPrefab: {fileID: 9164876021177939509, guid: 5a8ee21825e93f847b0b0851289ffbe6, type: 3}
+  CollectionNetBlueprintPrefab: {fileID: 4654984751289089014, guid: 53200648d449bf345a4a0b7e39a757a6, type: 3}
+  CollectionNetCost:
+    Wood: 6
+    Scrap: 2
+    Fish: 0
+    CookedFish: 0
+    Water: 0
+    Potato: 0
+    BakedPotato: 0
+  BedPrefab: {fileID: 4959532256122203640, guid: 07679acf851f2e74d9a9ed297b263847, type: 3}
+  BedBlueprintPrefab: {fileID: 1679852147150044244, guid: 242f58e8ea84194488e5b6568730986f, type: 3}
+  BedCost:
+    Wood: 6
+    Scrap: 1
+    Fish: 0
+    CookedFish: 0
+    Water: 0
+    Potato: 0
+    BakedPotato: 0
+  PlantPrefab: {fileID: 4214180586403771231, guid: 0d90510cb532fb941a3ff7ccbc759661, type: 3}
+  PlantBlueprintPrefab: {fileID: 9205557320965085009, guid: c692cd8de93df0c4ca560279e9fd2814, type: 3}
+  PlantCost:
+    Wood: 2
+    Scrap: 1
+    Fish: 0
+    CookedFish: 0
+    Water: 0
+    Potato: 0
+    BakedPotato: 0
+  RugPrefab: {fileID: 2330407001287990511, guid: f0a595bcbbd7d2b47bd82a015fa97244, type: 3}
+  RugBlueprintPrefab: {fileID: 7718169656623993387, guid: c01328bfb23cdfd4598e9446a264ff67, type: 3}
+  RugCost:
+    Wood: 3
+    Scrap: 0
+    Fish: 0
+    CookedFish: 0
+    Water: 0
+    Potato: 0
+    BakedPotato: 0
+  DecorLampPrefab: {fileID: 4767500001974640742, guid: 9d4256904d4fbe14db171a5b0e2401f7, type: 3}
+  DecorLampBlueprintPrefab: {fileID: 4539867212801302073, guid: be5ee7b198823b04dbecaf30367edf32, type: 3}
+  DecorLampCost:
+    Wood: 2
+    Scrap: 2
+    Fish: 0
+    CookedFish: 0
+    Water: 0
+    Potato: 0
+    BakedPotato: 0
+  PlanterPrefab: {fileID: 1289066142233301777, guid: e701dbd798ecd0e4ca5bbf88abe9ae38, type: 3}
+  PlanterBlueprintPrefab: {fileID: 4776059763898313711, guid: b3fc46a8885371d40bf89c2f4195f721, type: 3}
+  PlanterCost:
+    Wood: 4
+    Scrap: 1
+    Fish: 0
+    CookedFish: 0
+    Water: 0
+    Potato: 0
+    BakedPotato: 0
   ValidColor: {r: 0.15, g: 0.91, b: 0.7, a: 0.38}
   InvalidColor: {r: 1, g: 0.28, b: 0.2, a: 0.35}
   PlannedColor: {r: 0.24, g: 0.74, b: 0.95, a: 0.28}

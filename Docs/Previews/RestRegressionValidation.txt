@@ -1,0 +1,13 @@
+PASS: Unity 2022.3.62f2; isolated FacilityValidationProject; actual Play mode with built Addressables.
+
+RestValidation: 1985 checks, exit 0.
+CrewRecruitmentValidation: 1901 checks, exit 0.
+ProgressionValidation: 923 assertions, exit 0.
+FacilityValidation: 303 checks, exit 0.
+CollectionNetValidation: 300 checks, exit 0.
+ExplorationValidation: 1531 assertions, exit 0.
+
+All 104 delivered C# files match the tested copy by SHA-256 and script GUID. Nine delivered scene/config/prefab assets match by SHA-256; existing GUIDs were preserved. Source/README whitespace checks passed.
+Reviewed bed/sleeping and crew-panel images at 1600x900 and 1280x800. Construction and sleep demos use temporary validation inventory; the authored scene still starts with one sailor, eight wood, two scrap and no bed.
+During FacilityValidation editor startup, Unity's Android USB target scan logged an already-exited helper process; the Play validation subsequently passed and Unity exited with code 0. No game exception or C# compiler error occurred in the final rest validation.
+The original project was not opened in a second editor process. Registry package configuration remains unchanged. Built AA output is in the isolated copy; the source project's Asset Database Play mode uses the delivered UI prefabs.

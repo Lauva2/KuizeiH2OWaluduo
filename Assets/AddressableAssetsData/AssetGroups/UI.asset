@@ -17,8 +17,23 @@ MonoBehaviour:
     m_SerializedData: []
   m_GUID: 75dc69f6a96eacd4e9bd10d75e03a24a
   m_SerializeEntries:
+  - m_GUID: 97440ff196bc33c47a49a56e77ce91d6
+    m_Address: UIPop_Comfort
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b5e16647fd1500447a0dd97a7a6e3b2a
     m_Address: UICommon_Build
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bf60e17094e6bf94b8359de8cab97551
+    m_Address: UIPop_Crew
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f30c93fd8645e9a42af2bf26d0b76c2e
+    m_Address: UICommon_Facility
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

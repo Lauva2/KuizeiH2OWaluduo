@@ -25,6 +25,11 @@ namespace RaftGame.Core
         public LootConfig Loot;
         public DayNightConfig DayNight;
         public OceanLifeConfig OceanLife;
+        public CollectionNetConfig CollectionNets;
+        public RescueConfig Rescue;
+        public RestConfig Rest;
+        public ComfortConfig Comfort;
+        public RaftGame.Farming.FarmingConfig Farming;
 
         [Header("Orthographic camera")]
         [Range(30f, 80f)] public float CameraTilt = 52f;

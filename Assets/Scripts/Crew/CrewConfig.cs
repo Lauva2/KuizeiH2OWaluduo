@@ -6,6 +6,8 @@ namespace RaftGame.Crew
     public sealed class CrewConfig : ScriptableObject
     {
         public GameObject CrewPrefab;
+        public string FirstName = "阿航";
+        public string RecruitName = "小澜";
         public Vector2Int SpawnCell = Vector2Int.zero;
         [Min(0.1f)] public float WalkSpeed = 1.8f;
         [Min(0.1f)] public float ConstructionDuration = 4.5f;

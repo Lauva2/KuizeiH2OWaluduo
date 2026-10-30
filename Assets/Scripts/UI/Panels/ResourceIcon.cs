@@ -35,6 +35,14 @@ namespace RaftGame.UI
                 Polygon(new Color(.18f, .58f, .77f), new Vector2(.5f, .96f), new Vector2(.16f, .46f), new Vector2(.15f, .27f), new Vector2(.28f, .1f), new Vector2(.5f, .05f), new Vector2(.72f, .1f), new Vector2(.85f, .27f), new Vector2(.84f, .46f));
                 Circle(new Vector2(.35f, .35f), new Vector2(.07f, .14f), new Color(.68f, .9f, .94f));
             }
+            else if (Resource == ResourceType.Potato || Resource == ResourceType.BakedPotato)
+            {
+                bool baked = Resource == ResourceType.BakedPotato;
+                Circle(new Vector2(.5f, .45f), new Vector2(.40f, .30f), baked ? new Color(.79f, .46f, .23f) : new Color(.72f, .55f, .31f));
+                if (baked) Circle(new Vector2(.51f, .48f), new Vector2(.29f, .18f), new Color(.95f, .82f, .51f));
+                foreach (var point in new[] { new Vector2(.30f, .46f), new Vector2(.60f, .34f), new Vector2(.69f, .56f) }) Circle(point, Vector2.one * .035f, new Color(.42f, .29f, .15f));
+                if (baked) foreach (float x in new[] { .38f, .63f }) Polygon(new Color(.70f, .77f, .68f), new Vector2(x, .79f), new Vector2(x + .035f, .79f), new Vector2(x + .08f, .96f), new Vector2(x + .045f, .96f));
+            }
             else
             {
                 Color body = Resource == ResourceType.CookedFish ? new Color(.85f, .49f, .20f) : new Color(.35f, .67f, .65f);

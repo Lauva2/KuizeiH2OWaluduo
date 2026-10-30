@@ -15,3 +15,8 @@ MonoBehaviour:
   StartingInventory:
     Wood: 8
     Scrap: 2
+    Fish: 0
+    CookedFish: 0
+    Water: 0
+    Potato: 2
+    BakedPotato: 0

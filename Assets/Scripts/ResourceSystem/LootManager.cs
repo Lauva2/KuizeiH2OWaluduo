@@ -42,7 +42,7 @@ namespace RaftGame.Resources
                 kind == ResourceType.Wood ? new ResourceCost(amount, 0) : new ResourceCost(0, amount);
             return Award(next, output, false, kind, "钓获 · " + Name(kind) + " × " + amount);
         }
-        public bool OpenCrate()
+        public bool OpenCrate(Action commit = null)
         {
             if (!IsInitialized || awarding) return false;
             LootState next = state;
@@ -50,19 +50,19 @@ namespace RaftGame.Resources
             ResourceType kind = reward < .45f ? ResourceType.Water : reward < .75f ? ResourceType.Wood : ResourceType.Scrap;
             int amount = kind == ResourceType.Wood ? 3 : kind == ResourceType.Water ? 2 : 2;
             var output = kind == ResourceType.Water ? new ResourceCost(0, 0, 0, 0, amount) : kind == ResourceType.Wood ? new ResourceCost(amount, 0) : new ResourceCost(0, amount);
+            output.Potato = 1;
             bool found = !building.PurifierUnlocked && (SeaRandom.Value(ref next.RandomState) < Mathf.Clamp01(configuration.PurifierBlueprintChance) ||
                 next.CratesWithoutBlueprint >= Mathf.Max(2, configuration.BlueprintCrateGuarantee) - 1);
             next.CratesWithoutBlueprint = found || building.PurifierUnlocked ? 0 : next.CratesWithoutBlueprint + 1;
-            string message = found ? "发现图纸 · 海水净化器已解锁！按 B 查看" : "打开补给箱 · " + Name(kind) + " × " + amount;
-            return Award(next, output, found, kind, message);
+            string message = found ? "发现海水净化器图纸 · 按 B 查看 · 土豆 × 1" : "打开补给箱 · " + Name(kind) + " × " + amount + " · 土豆 × 1";
+            return Award(next, output, found, kind, message, commit);
         }
-        private bool Award(LootState next, ResourceCost output, bool unlock, ResourceType kind, string message)
+        private bool Award(LootState next, ResourceCost output, bool unlock, ResourceType kind, string message, Action commit = null)
         {
             awarding = true; LootState previous = state; state = next;
             try
             {
-                if (!resources.TryGrant(output)) { state = previous; return false; }
-                if (unlock) building.UnlockPurifier();
+                if (!resources.TryGrant(output, () => { commit?.Invoke(); if (unlock) building.UnlockPurifier(); })) { state = previous; return false; }
                 LastResource = kind; Message = message; Changed?.Invoke(); return true;
             }
             finally { awarding = false; }

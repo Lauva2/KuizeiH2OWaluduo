@@ -12,6 +12,11 @@ namespace RaftGame.UI
         public RectTransform CatalogWindow;
         private void OnEnable() => Fit();
         private void OnRectTransformDimensionsChange() => Fit();
+        public void ResizeCatalog(float height)
+        {
+            if (CatalogWindow == null || Mathf.Approximately(CatalogWindow.sizeDelta.y, height)) return;
+            CatalogWindow.sizeDelta = new Vector2(920, height); Fit();
+        }
         private void Fit()
         {
             if (Header == null) return;
@@ -22,7 +27,7 @@ namespace RaftGame.UI
             if (TimeControls != null) TimeControls.anchoredPosition = new Vector2(-24, width < 1560f ? 180 : 24);
             if (CatalogWindow != null)
             {
-                float fit = Mathf.Clamp(Mathf.Min((width - 48) / 920, (((RectTransform)transform).rect.height - 160) / 452), .2f, 1);
+                float fit = Mathf.Clamp(Mathf.Min((width - 48) / 920, (((RectTransform)transform).rect.height - 160) / CatalogWindow.sizeDelta.y), .2f, 1);
                 CatalogWindow.localScale = Vector3.one * fit;
             }
         }

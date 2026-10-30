@@ -1,0 +1,15 @@
+PASS: Unity 2022.3.62f2; isolated .validation/ComfortProject; actual Play mode with built Addressables.
+
+ComfortValidation: 319 checks, exit 0.
+RestValidation: 1985 checks, exit 0.
+CrewRecruitmentValidation: 1901 checks, exit 0.
+ProgressionValidation: 923 assertions, exit 0.
+FacilityValidation: 303 checks, exit 0.
+CollectionNetValidation: 300 checks, exit 0.
+ExplorationValidation: 1532 assertions, exit 0.
+
+All 112 delivered C# files match the tested copy by SHA-256 and script GUID. All 23 delivered scene/config/prefab/mesh/material/group assets match by SHA-256; existing asset GUIDs were preserved. Source/README whitespace checks passed.
+Reviewed four-card living catalog, selected decoration, comfort popup, and decorated daytime/night camp images at 1600x900 and 1280x800. Models preserve deck passage; native plant leaves have separate front/back vertices for correct lighting. Recovery, score caps and cap-aware removal forecasts were checked against actual state changes.
+The original Temp validation copy was cleared externally during work. Validation was rebuilt in the ignored .validation directory, and all final checks ran there. The source project's registry package manifest remains unchanged; the isolated copy resolves cached packages locally.
+Some editor starts logged an Android USB target-scan helper process that had already exited; all Play scenarios subsequently passed and Unity exited with code 0. The final comfort Play validation produced no game exception or C# compiler error.
+Screenshots use temporary test inventory and decoration layouts. The authored scene still starts with one sailor, eight wood, two scrap, one rod and no free decorations. Generated AA bundles remain in the isolated copy; source Play mode uses the delivered Asset Database UI prefabs.

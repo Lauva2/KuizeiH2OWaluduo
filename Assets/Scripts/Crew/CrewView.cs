@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace RaftGame.Crew
 {
-    public enum CrewActivity { Idle, Walking, Constructing, WaitingForAccess, Gathering, WaitingForMaterials, WaitingForSalvage, Fishing, Cooking, Eating, Purifying, Drinking }
+    public enum CrewActivity { Idle, Walking, Constructing, WaitingForAccess, Gathering, WaitingForMaterials, WaitingForSalvage, Fishing, Cooking, Eating, Purifying, Drinking, CollectingNet, Rescuing, Resting, Planting, Watering, Harvesting }
 
     /// <summary>Procedural presentation only. CrewManager owns movement, tasks and progress.</summary>
     public sealed class CrewView : MonoBehaviour
@@ -22,23 +22,35 @@ namespace RaftGame.Crew
         [SerializeField] private GameObject cookingTool;
         [SerializeField] private GameObject mealFood;
         public GameObject DrinkCup;
+        public GameObject WateringCan, MealPotato;
         private Camera sceneCamera;
         private float animationTime;
         private Vector3 bodyRest;
+        private Quaternion bodyRotation;
+
+        public void ApplyCrewColor(int id)
+        {
+            if (id == 1) return;
+            var tint = new MaterialPropertyBlock(); tint.SetColor("_Color", new Color(.83f, .40f, .20f));
+            foreach (var renderer in GetComponentsInChildren<Renderer>(true))
+                if (renderer.sharedMaterial != null && renderer.sharedMaterial.name.Contains("SeaTeal")) renderer.SetPropertyBlock(tint);
+        }
 
         public void Initialize(Camera camera)
         {
             sceneCamera = camera;
             bodyRest = body.localPosition;
+            bodyRotation = body.localRotation;
             Present(CrewActivity.Idle, 0f, 0f, Vector3.zero);
         }
 
-        public void Present(CrewActivity activity, float progress, float deltaTime, Vector3 workLocation)
+        public void Present(CrewActivity activity, float progress, float deltaTime, Vector3 workLocation, RaftGame.Resources.ResourceType food = RaftGame.Resources.ResourceType.CookedFish)
         {
+            body.localRotation = bodyRotation;
             animationTime += Mathf.Max(0f, deltaTime);
             bool walking = activity == CrewActivity.Walking;
             bool working = activity == CrewActivity.Constructing;
-            bool gathering = activity == CrewActivity.Gathering;
+            bool gathering = activity == CrewActivity.Gathering || activity == CrewActivity.CollectingNet || activity == CrewActivity.Rescuing || activity == CrewActivity.Planting || activity == CrewActivity.Watering || activity == CrewActivity.Harvesting;
             bool fishing = activity == CrewActivity.Fishing;
             bool cooking = activity == CrewActivity.Cooking || activity == CrewActivity.Purifying;
             bool eating = activity == CrewActivity.Eating || activity == CrewActivity.Drinking;
@@ -52,7 +64,9 @@ namespace RaftGame.Crew
             body.localPosition = bodyRest + Vector3.up * (walking ? Mathf.Abs(Mathf.Sin(animationTime * 10f)) * 0.025f : Mathf.Sin(animationTime * 2f) * 0.008f);
             hammer.SetActive(working);
             if (cookingTool != null) cookingTool.SetActive(activity == CrewActivity.Cooking);
-            if (mealFood != null) mealFood.SetActive(activity == CrewActivity.Eating);
+            if (mealFood != null) mealFood.SetActive(activity == CrewActivity.Eating && food == RaftGame.Resources.ResourceType.CookedFish);
+            if (MealPotato != null) MealPotato.SetActive(activity == CrewActivity.Eating && food == RaftGame.Resources.ResourceType.BakedPotato);
+            if (WateringCan != null) WateringCan.SetActive(activity == CrewActivity.Watering);
             if (DrinkCup != null) DrinkCup.SetActive(activity == CrewActivity.Drinking);
             if (fishingRod != null) fishingRod.SetActive(fishing);
             if (fishingLine != null) fishingLine.gameObject.SetActive(fishing);
@@ -73,6 +87,14 @@ namespace RaftGame.Crew
                 progressFill.localScale = new Vector3(0.96f * progress, 0.09f, 0.025f);
                 progressFill.localPosition = new Vector3(-0.48f + 0.48f * progress, 0, -0.025f);
             }
+        }
+        public void Wake() { body.localPosition = bodyRest; body.localRotation = bodyRotation; }
+        public void PresentRest(RaftGame.Building.BedView bed)
+        {
+            if (bed == null || bed.SleepAnchor == null) return;
+            body.position = bed.SleepAnchor.position;
+            body.rotation = bed.SleepAnchor.rotation * Quaternion.Euler(-90, 0, 0);
+            bed.Present(true, sceneCamera);
         }
     }
 }

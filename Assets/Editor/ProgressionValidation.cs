@@ -61,7 +61,7 @@ namespace RaftGame.Editor
                 var camera = UnityEngine.Object.FindObjectOfType<CameraManager>();
                 var panel = (UICommon_Build)ui.GetView(UICommon_Build.Address); var canvas = ui.GetComponent<Canvas>();
                 Require(game.IsInitialized && water.IsInitialized && game.Saves.IsInitialized, "New systems initialize in the scene");
-                Require(panel.ResourceTiles.Length == 5 && panel.WaterText != null && panel.SaveButton != null, "Actual AA HUD contains graphical resources and save controls");
+                Require(panel.ResourceTiles.Length == ResourceManager.TypeCount && panel.WaterText != null && panel.SaveButton != null, "Actual AA HUD contains every resource and save controls");
                 foreach (var icon in panel.GetComponentsInChildren<ResourceIcon>())
                     Require(icon.GetComponent<CanvasRenderer>() != null, "Resource illustration has an actual rendering component");
                 panel.SpeedTwoButton.onClick.Invoke(); Require(game.TimeControl.Speed == 2 && Time.timeScale == 2, "2x button controls engine time");

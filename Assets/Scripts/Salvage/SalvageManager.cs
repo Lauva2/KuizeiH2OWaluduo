@@ -20,6 +20,7 @@ namespace RaftGame.Salvage
         private ResourceManager resources;
         private Camera sceneCamera;
         private LootManager loot;
+        internal Func<FloatingResource, Vector3, Vector3, bool> NetCapture;
         private int sequence;
         private int randomState;
         public int RandomState => randomState;
@@ -63,8 +64,10 @@ namespace RaftGame.Salvage
                 if (item == null) { items.RemoveAt(index); Notify(); continue; }
                 item.Age += dt;
                 Vector3 position = item.transform.position;
+                Vector3 previous = position;
                 Vector2 flow = ocean.GetDriftDirection(position, item.Windage);
                 position += new Vector3(flow.x, 0, flow.y) * (Mathf.Max(0f, configuration.DriftSpeed) * item.DriftMultiplier * dt);
+                if (dt > 0 && item.Age <= configuration.Lifetime && NetCapture != null && NetCapture(item, previous, position)) continue;
                 if (item.Age > configuration.Lifetime || DeckPathfinder.HasDeck(building.Cells, building.WorldToCell(position)))
                 { Remove(item); continue; }
                 position.y = ocean.GetSurfaceHeight(position) + 0.08f + Mathf.Sin(item.Age * 1.6f + item.Phase) * 0.025f;
@@ -78,14 +81,14 @@ namespace RaftGame.Salvage
                 SpawnRandom(SeaRandom.Range(ref randomState, configuration.SpawnAheadDistance * .45f, configuration.SpawnAheadDistance * 1.3f));
                 spawnTimer = NextInterval();
             }
-            if (building.CatalogOpen || building.Tool != BuildTool.None || Input.GetMouseButton(2) ||
+            if (building.WorldModalOpen || building.FacilityInputBlocked || building.CatalogOpen || building.Tool != BuildTool.None || Input.GetMouseButton(2) ||
                 (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())) return;
             if (Input.GetMouseButtonDown(0)) TryToggleMarkAt(sceneCamera.ScreenPointToRay(Input.mousePosition));
         }
 
         public bool TryToggleMarkAt(Ray ray)
         {
-            if (!IsInitialized || building.CatalogOpen || building.Tool != BuildTool.None) return false;
+            if (!IsInitialized || building.WorldModalOpen || building.FacilityInputBlocked || building.CatalogOpen || building.Tool != BuildTool.None) return false;
             // Drifting objects move outside FixedUpdate; clicks must use their current visible positions,
             // including while simulation time is paused.
             Physics.SyncTransforms();
@@ -227,6 +230,11 @@ namespace RaftGame.Salvage
             Notify();
             return true;
         }
+        internal bool StoreInNet(FloatingResource item, Action store)
+        {
+            if (!IsActive(item) || item.Collecting) return false;
+            item.Collecting = true; store(); return Remove(item);
+        }
 
         private void Notify() { Version++; Changed?.Invoke(); }
         public List<FloatingSave> CaptureItems()
@@ -258,6 +266,7 @@ namespace RaftGame.Salvage
             foreach (FloatingResource item in items) if (item != null) Destroy(item.gameObject);
             items.Clear();
             IsInitialized = false;
+            NetCapture = null;
             Changed = null;
         }
     }

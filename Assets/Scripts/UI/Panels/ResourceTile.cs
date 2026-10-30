@@ -20,8 +20,9 @@ namespace RaftGame.UI
             AvailableFill.anchorMax = new Vector2(Mathf.Clamp01((total - reserved) / denominator), 1);
             float occupied = Mathf.Clamp01(total / denominator), held = Mathf.Clamp01(reserved / denominator);
             ReservedFill.anchorMin = new Vector2(Mathf.Max(0, occupied - held), 0); ReservedFill.anchorMax = new Vector2(occupied, 1);
-            string[] names = { "木材", "废料", "鲜鱼", "熟鱼", "淡水" };
+            string[] names = { "木材", "废料", "鲜鱼", "熟鱼", "淡水", "土豆（可留种）", "烤土豆" };
             Description = $"{names[(int)Resource]}  {total}\n可用 {total - reserved} · 预留 {reserved}" + (target >= 0 ? $"\n储备目标 {target} · 短条显示目标进度" : "\n短条显示可用与预留占比");
+            if (Resource == ResourceType.CookedFish || Resource == ResourceType.BakedPotato) Description = $"{names[(int)Resource]}  {total}\n可用 {total - reserved} · 预留 {reserved}\n熟食目标 {target} · 熟鱼与烤土豆合计";
             if (hovered == this) TooltipText.text = Description;
         }
         public void OnPointerEnter(PointerEventData data)

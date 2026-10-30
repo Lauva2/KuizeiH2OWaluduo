@@ -1,127 +1,61 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using RaftGame.Resources;
 
 namespace RaftGame.Needs
 {
-    public sealed class MealSession
-    {
-        public float Progress { get; internal set; }
-        internal object Owner;
-        internal bool Ended;
-    }
-    public sealed class DrinkSession
-    {
-        public float Progress { get; internal set; }
-        internal object Owner;
-        internal bool Ended;
-    }
-
-    /// <summary>Gentle hunger: reduced work speed only, with no health or death state.</summary>
+    /// <summary>Owns independent personal needs. Legacy properties refer to member 1.</summary>
     public sealed class NeedsManager : MonoBehaviour
     {
+        private readonly Dictionary<int, CrewNeeds> members = new Dictionary<int, CrewNeeds>();
         private NeedsConfig configuration;
         private ResourceManager resources;
-        private MealSession active;
-        private DrinkSession drink;
-        private int previousHydration = -1;
-        private int previousSatiety = -1;
-        private int previousEfficiency = -1;
         public bool IsInitialized { get; private set; }
-        public float Satiety { get; private set; }
-        public float Hydration { get; private set; }
-        public float Efficiency => !IsInitialized ? 1f : Mathf.Lerp(Mathf.Clamp(configuration.MinimumEfficiency, 0.1f, 1f), 1f,
-            Mathf.Min(Mathf.Clamp01(Satiety / Mathf.Max(1f, configuration.HungryBelow)), Mathf.Clamp01(Hydration / Mathf.Max(1f, configuration.ThirstyBelow))));
-        public bool ShouldEat => IsInitialized && active == null && drink == null && Satiety <= configuration.EatBelow && resources.GetAvailable(ResourceType.CookedFish) > 0;
-        public bool ShouldDrink => IsInitialized && active == null && drink == null && Hydration <= configuration.DrinkBelow && resources.GetAvailable(ResourceType.Water) > 0;
         public int Version { get; private set; }
         public event Action Changed;
-
+        public CrewNeeds Primary => GetMember(1);
+        public float Satiety => Primary != null ? Primary.Satiety : 0;
+        public float Hydration => Primary != null ? Primary.Hydration : 0;
+        public float Efficiency => Primary != null ? Primary.Efficiency : 1;
+        public float Energy => Primary != null ? Primary.Energy : 0;
+        public float StartingEnergy => configuration != null ? configuration.StartingEnergy : 85;
+        public int DrinkingDemand { get { int count = 0; foreach (var member in members.Values) if (member.WantsDrink) count++; return count; } }
+        public bool ShouldEat => Primary != null && Primary.ShouldEat;
+        public bool ShouldDrink => Primary != null && Primary.ShouldDrink;
         public bool Initialize(NeedsConfig config, ResourceManager inventory)
         {
             if (IsInitialized) return true;
             if (config == null || inventory == null || !inventory.IsInitialized) return false;
-            configuration = config; resources = inventory; IsInitialized = true; Hydration = Mathf.Clamp(config.StartingHydration, 0, 100); SetSatiety(config.StartingSatiety); return true;
+            configuration = config; resources = inventory; IsInitialized = true; AddMember(1); return true;
         }
-
-        public void Tick(float deltaTime)
+        public CrewNeeds GetMember(int id) => members.TryGetValue(id, out var member) ? member : null;
+        public CrewNeeds AddMember(int id)
         {
-            if (!IsInitialized || deltaTime <= 0f) return;
-            SetSatiety(Satiety - Mathf.Max(0f, configuration.DrainPerSecond) * deltaTime);
-            SetHydration(Hydration - Mathf.Max(0f, configuration.ThirstDrainPerSecond) * deltaTime);
+            if (!IsInitialized || id < 1 || id > 2) return null;
+            if (members.TryGetValue(id, out var existing)) return existing;
+            var member = new CrewNeeds(); member.Initialize(configuration, resources);
+            member.Changed += Notify; members.Add(id, member); Notify(); return member;
         }
-
-        public void SetHydration(float value)
+        public void RemoveMember(int id)
         {
-            if (!IsInitialized || float.IsNaN(value)) return;
-            Hydration = Mathf.Clamp(value, 0, 100);
-            int level = Mathf.FloorToInt(Hydration), efficiency = Mathf.RoundToInt(Efficiency * 100);
-            if (level == previousHydration && efficiency == previousEfficiency) return;
-            previousHydration = level; previousEfficiency = efficiency; Notify();
+            if (id == 1 || !members.TryGetValue(id, out var member)) return;
+            member.Changed -= Notify; member.Shutdown(); members.Remove(id); Notify();
         }
-        public DrinkSession TryBeginDrink(object owner)
-        {
-            if (owner == null || !ShouldDrink) return null;
-            var session = new DrinkSession { Owner = owner }; drink = session;
-            if (!resources.TryReserve(session, new ResourceCost(0, 0, 0, 0, 1))) { drink = null; return null; }
-            Notify(); return session;
-        }
-        private bool ValidDrink(DrinkSession session, object owner) => IsInitialized && session != null && ReferenceEquals(session, drink) && !session.Ended && ReferenceEquals(session.Owner, owner);
-        public bool AdvanceDrink(DrinkSession session, object owner, float deltaTime)
-        {
-            if (!ValidDrink(session, owner)) return false;
-            session.Progress = Mathf.Clamp01(session.Progress + Mathf.Max(0, deltaTime) / Mathf.Max(0.1f, configuration.DrinkingDuration));
-            if (session.Progress < 1) return true;
-            session.Ended = true; drink = null;
-            if (!resources.Commit(session)) { Notify(); return false; }
-            SetHydration(Hydration + Mathf.Max(1, configuration.DrinkRestore)); Notify(); return true;
-        }
-        public void CancelDrink(DrinkSession session, object owner)
-        {
-            if (!ValidDrink(session, owner)) return;
-            session.Ended = true; drink = null; resources.Release(session); Notify();
-        }
-
-        public void SetSatiety(float value)
-        {
-            if (!IsInitialized || float.IsNaN(value)) return;
-            Satiety = Mathf.Clamp(value, 0f, 100f);
-            int satiety = Mathf.FloorToInt(Satiety), efficiency = Mathf.RoundToInt(Efficiency * 100f);
-            if (satiety == previousSatiety && efficiency == previousEfficiency) return;
-            previousSatiety = satiety; previousEfficiency = efficiency; Notify();
-        }
-
-        public MealSession TryBeginMeal(object owner)
-        {
-            if (owner == null || !ShouldEat) return null;
-            var meal = new MealSession { Owner = owner };
-            active = meal;
-            if (!resources.TryReserve(meal, new ResourceCost(0, 0, 0, 1))) { active = null; return null; }
-            Notify(); return meal;
-        }
-
-        public bool Advance(MealSession meal, object owner, float deltaTime)
-        {
-            if (!Valid(meal, owner)) return false;
-            meal.Progress = Mathf.Clamp01(meal.Progress + Mathf.Max(0f, deltaTime) / Mathf.Max(0.1f, configuration.EatingDuration));
-            if (meal.Progress < 1f) return true;
-            meal.Ended = true; active = null;
-            if (!resources.Commit(meal)) { Notify(); return false; }
-            SetSatiety(Satiety + Mathf.Max(1f, configuration.MealRestore)); Notify(); return true;
-        }
-
-        private bool Valid(MealSession meal, object owner) => IsInitialized && meal != null && !meal.Ended && ReferenceEquals(active, meal) && ReferenceEquals(meal.Owner, owner);
-        public void Cancel(MealSession meal, object owner)
-        {
-            if (!Valid(meal, owner)) return;
-            meal.Ended = true; active = null; resources.Release(meal); Notify();
-        }
+        public void Tick(float deltaTime) { if (IsInitialized) foreach (var member in members.Values) member.Tick(deltaTime); }
+        public void SetSatiety(float value) => Primary?.SetSatiety(value);
+        public void SetHydration(float value) => Primary?.SetHydration(value);
+        public MealSession TryBeginMeal(object owner) => Primary?.TryBeginMeal(owner);
+        public bool Advance(MealSession session, object owner, float dt) => Primary != null && Primary.Advance(session, owner, dt);
+        public void Cancel(MealSession session, object owner) => Primary?.Cancel(session, owner);
+        public DrinkSession TryBeginDrink(object owner) => Primary?.TryBeginDrink(owner);
+        public bool AdvanceDrink(DrinkSession session, object owner, float dt) => Primary != null && Primary.AdvanceDrink(session, owner, dt);
+        public void CancelDrink(DrinkSession session, object owner) => Primary?.CancelDrink(session, owner);
         private void Notify() { Version++; Changed?.Invoke(); }
         public void Shutdown()
         {
-            if (active != null) Cancel(active, active.Owner);
-            if (drink != null) CancelDrink(drink, drink.Owner);
-            IsInitialized = false; Changed = null;
+            foreach (var member in members.Values) { member.Changed -= Notify; member.Shutdown(); }
+            members.Clear(); IsInitialized = false; Changed = null;
         }
     }
 }

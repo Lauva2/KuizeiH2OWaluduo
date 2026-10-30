@@ -18,4 +18,15 @@ MonoBehaviour:
     Scrap: 0
     Fish: 1
     CookedFish: 0
+    Water: 0
+    Potato: 0
+    BakedPotato: 0
+  PotatoRecipe:
+    Wood: 1
+    Scrap: 0
+    Fish: 0
+    CookedFish: 0
+    Water: 0
+    Potato: 1
+    BakedPotato: 0
   CookingDuration: 6
